@@ -560,12 +560,90 @@
   .install-btn.show { display: inline-flex; }
   .header-actions { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
 
-  /* RESPONSIVE */
+  /* ===== FLOW DIAGRAM ===== */
+  .flow-process-card {
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: 14px; padding: 20px; margin-bottom: 20px;
+    cursor: pointer; transition: all 0.2s;
+  }
+  .flow-process-card:hover { border-color: var(--accent); transform: translateY(-1px); }
+  .flow-header { display: flex; align-items: center; gap: 12px; margin-bottom: 16px; }
+  .flow-icon { font-size: 1.8rem; }
+  .flow-title { font-size: 1rem; font-weight: 700; }
+  .flow-sub { font-size: 0.78rem; color: var(--muted); margin-top: 2px; }
+  .flow-steps {
+    display: flex; align-items: stretch; gap: 0; overflow-x: auto;
+    padding-bottom: 4px;
+  }
+  .flow-step {
+    display: flex; align-items: center; flex-shrink: 0;
+  }
+  .flow-step-box {
+    background: var(--surface2); border: 1px solid var(--border);
+    border-radius: 10px; padding: 10px 14px; min-width: 120px;
+    text-align: center; position: relative;
+  }
+  .flow-step-box:hover { border-color: var(--accent2); background: rgba(124,58,237,0.1); }
+  .fs-table {
+    font-family: var(--mono); font-weight: 700; font-size: 0.85rem;
+    color: var(--accent); display: block; margin-bottom: 4px;
+  }
+  .fs-label { font-size: 0.72rem; color: var(--muted); line-height: 1.3; }
+  .flow-arrow {
+    color: var(--muted); font-size: 1.2rem; padding: 0 6px; flex-shrink: 0;
+  }
+  .flow-step-box.highlight { border-color: var(--accent3); background: rgba(16,185,129,0.1); }
+
+  /* ===== ARCH QUIZ ===== */
+  .arch-card {
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: 12px; padding: 20px; margin-bottom: 12px;
+    border-left: 4px solid var(--accent2);
+  }
+  .arch-term { font-family: var(--mono); font-weight: 700; color: var(--accent2); font-size: 1rem; margin-bottom: 6px; }
+  .arch-def { font-size: 0.85rem; color: var(--text); line-height: 1.6; margin-bottom: 8px; }
+  .arch-example { font-size: 0.78rem; color: var(--muted); font-style: italic; }
+
+  /* ===== CONSULTING SCREEN ===== */
+  .consult-card {
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: 14px; padding: 24px; margin-bottom: 16px;
+  }
+  .consult-situation {
+    background: var(--surface2); border-left: 3px solid var(--warn);
+    border-radius: 0 8px 8px 0; padding: 12px 16px;
+    font-size: 0.88rem; line-height: 1.6; margin-bottom: 16px;
+    color: var(--text);
+  }
+  .situation-label { font-size: 0.68rem; text-transform: uppercase; letter-spacing: 2px; color: var(--warn); font-family: var(--mono); margin-bottom: 6px; }
+
+  /* ===== CATALOG TABS (with Processes tab) ===== */
+  .catalog-view-tabs {
+    display: flex; gap: 8px; margin-bottom: 20px;
+  }
+  .cv-tab {
+    padding: 6px 16px; border-radius: 8px;
+    border: 1px solid var(--border); background: transparent;
+    color: var(--muted); font-size: 0.82rem; cursor: pointer;
+    font-family: var(--sans); font-weight: 600; transition: all 0.15s;
+  }
+  .cv-tab.active, .cv-tab:hover {
+    background: rgba(0,212,255,0.1); border-color: var(--accent); color: var(--accent);
+  }
+
+  /* ===== TROUBLESHOOTING badge ===== */
+  .q-type-badge.trouble { background: rgba(245,158,11,0.15); color: var(--warn); }
+  .q-type-badge.arch { background: rgba(124,58,237,0.15); color: var(--accent2); }
+  .q-type-badge.flow { background: rgba(16,185,129,0.15); color: var(--accent3); }
+
+  /* ===== RESPONSIVE ===== */
   @media (max-width: 600px) {
     .result-stats { grid-template-columns: repeat(2, 1fr); }
     .hero h1 { font-size: 1.8rem; }
     .mode-grid { grid-template-columns: 1fr; }
     .header { flex-wrap: wrap; gap: 12px; }
+    .flow-steps { gap: 0; }
+    .flow-step-box { min-width: 100px; padding: 8px 10px; }
   }
 </style>
 </head>
@@ -630,6 +708,24 @@
         <div class="mode-desc">Apenas perguntas de SQL e relacionamento entre tabelas.</div>
         <div class="mode-badge">+20 XP/acerto</div>
       </div>
+      <div class="mode-card" onclick="startQuiz('arch')">
+        <div class="mode-icon">🏗️</div>
+        <div class="mode-name">Arquitetura</div>
+        <div class="mode-desc">AppServer, RPO, DBAccess, dicionário, convenções de nomenclatura, multifilial. O que cai em entrevista.</div>
+        <div class="mode-badge">+20 XP/acerto</div>
+      </div>
+      <div class="mode-card" onclick="startQuiz('consulting')">
+        <div class="mode-icon">🔧</div>
+        <div class="mode-name">Consultoria</div>
+        <div class="mode-desc">Sintoma → causa → onde investigar. Troubleshooting real de suporte e implantação. Timer estendido.</div>
+        <div class="mode-badge">+25 XP/acerto</div>
+      </div>
+      <div class="mode-card" onclick="showScreen('screen-flows')">
+        <div class="mode-icon">🔄</div>
+        <div class="mode-name">Fluxos de Processo</div>
+        <div class="mode-desc">P2P, O2C, Estoque, PCP. Visualize os processos ponta a ponta e treine ordenação de etapas.</div>
+        <div class="mode-badge">Referência + Quiz</div>
+      </div>
       <div class="mode-card" onclick="showScreen('screen-catalog')">
         <div class="mode-icon">📚</div>
         <div class="mode-name">Catálogo</div>
@@ -641,12 +737,36 @@
 
   <!-- CATALOG SCREEN -->
   <div class="screen" id="screen-catalog">
-    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">
       <h2 style="font-size:1.2rem;font-weight:700">📚 Top 100 Tabelas</h2>
       <button onclick="showScreen('screen-home')" style="background:var(--surface);border:1px solid var(--border);color:var(--muted);padding:6px 14px;border-radius:6px;cursor:pointer;font-size:0.82rem">← Voltar</button>
     </div>
     <div class="module-tabs" id="module-tabs"></div>
     <div class="table-grid" id="catalog-grid"></div>
+  </div>
+
+  <!-- FLOWS SCREEN -->
+  <div class="screen" id="screen-flows">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px">
+      <h2 style="font-size:1.2rem;font-weight:700">🔄 Fluxos de Processo</h2>
+      <div style="display:flex;gap:8px">
+        <button onclick="startQuiz('flow')" style="background:linear-gradient(135deg,var(--accent2),var(--accent));border:none;color:#fff;padding:6px 14px;border-radius:6px;cursor:pointer;font-size:0.82rem;font-weight:700">▶ Quiz de Fluxos</button>
+        <button onclick="showScreen('screen-home')" style="background:var(--surface);border:1px solid var(--border);color:var(--muted);padding:6px 14px;border-radius:6px;cursor:pointer;font-size:0.82rem">← Voltar</button>
+      </div>
+    </div>
+    <div id="flows-container"></div>
+  </div>
+
+  <!-- ARCH REFERENCE SCREEN -->
+  <div class="screen" id="screen-arch-ref">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px">
+      <h2 style="font-size:1.2rem;font-weight:700">🏗️ Arquitetura Protheus</h2>
+      <div style="display:flex;gap:8px">
+        <button onclick="startQuiz('arch')" style="background:linear-gradient(135deg,var(--accent2),var(--accent));border:none;color:#fff;padding:6px 14px;border-radius:6px;cursor:pointer;font-size:0.82rem;font-weight:700">▶ Quiz Arquitetura</button>
+        <button onclick="showScreen('screen-home')" style="background:var(--surface);border:1px solid var(--border);color:var(--muted);padding:6px 14px;border-radius:6px;cursor:pointer;font-size:0.82rem">← Voltar</button>
+      </div>
+    </div>
+    <div id="arch-ref-container"></div>
   </div>
 
   <!-- QUIZ SCREEN -->
@@ -1131,11 +1251,26 @@ const LEVELS = [
 // ====================== STATE ======================
 let state = { xp:0, streak:0, maxStreak:0, totalCorrect:0, totalAnswered:0 };
 let quizState = { questions:[], current:0, mode:'', xpEarned:0, correct:0, maxStreak:0, streak:0, timer:null, timeLeft:20 };
-const XP_MAP = { quick:10, marathon:15, sql:20 };
+const XP_MAP = { quick:10, marathon:15, sql:20, arch:20, consulting:25, flow:20 };
 
 // ====================== QUESTION GENERATORS ======================
 function generateQuestions(mode, count) {
   const qs = [];
+  // Pure arch mode
+  if(mode === 'arch') {
+    for(let i=0;i<count;i++) qs.push(buildArchQuestion());
+    return qs;
+  }
+  // Pure consulting mode
+  if(mode === 'consulting') {
+    for(let i=0;i<count;i++) qs.push(buildConsultQuestion());
+    return qs;
+  }
+  // Pure flow mode
+  if(mode === 'flow') {
+    for(let i=0;i<count;i++) qs.push(buildFlowQuestion([]));
+    return qs;
+  }
   const validTables = TABLES.filter(t => t.name && t.name !== '_removido_' && t.module !== '_');
   const pool = [...validTables].sort(() => Math.random()-0.5).slice(0, Math.min(count*3, validTables.length));
   const types = mode === 'sql'
@@ -1469,7 +1604,8 @@ function startQuiz(mode) {
   quizState.correct = 0;
   quizState.streak = 0;
   quizState.maxStreak = 0;
-  const count = mode === 'quick' ? 10 : mode === 'marathon' ? 25 : 15;
+  const counts = { quick:10, marathon:25, sql:15, arch:15, consulting:10, flow:12 };
+  const count = counts[mode] || 10;
   quizState.questions = generateQuestions(mode, count);
   showScreen('screen-quiz');
   renderQuestion();
@@ -1499,7 +1635,8 @@ function renderQuestion() {
 
   document.getElementById('feedback-panel').className = 'feedback-panel';
   document.getElementById('next-btn').style.display = 'none';
-  startTimer(q.type === 'sql' ? 30 : 20);
+  const sec = q.timerSec || (q.type && (q.type.includes('SQL') || q.type.includes('Cenário') || q.type.includes('Consultoria')) ? 40 : 20);
+  startTimer(sec);
 }
 
 let timerInterval;
@@ -1691,6 +1828,8 @@ function showScreen(id) {
   document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));
   document.getElementById(id).classList.add('active');
   if(id === 'screen-catalog') initCatalog();
+  if(id === 'screen-flows') initFlows();
+  if(id === 'screen-arch-ref') initArchRef();
 }
 
 // ====================== NOTIFICATION ======================
@@ -1753,6 +1892,427 @@ window.addEventListener('appinstalled', () => {
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', () => {
     navigator.serviceWorker.register('sw.js').catch(() => {});
+  });
+}
+
+// ====================== PROCESSES ======================
+const PROCESSES = [
+  {
+    id:'p2p', name:'Procure to Pay — Compras', icon:'🛒',
+    color:'#00D4FF', desc:'Do momento em que uma área precisa de um material até o pagamento ao fornecedor.',
+    steps:[
+      { table:'SC1', label:'Solicitação de Compra', desc:'Área requisitante pede o material via SIGACOM. Campos: C1_NUM, C1_PRODUTO, C1_QUANT, C1_DATPRF.' },
+      { table:'SC7', label:'Pedido de Compra', desc:'Compras negocia com fornecedor e emite o pedido. Campos: C7_NUM, C7_FORNECE, C7_VALOR.' },
+      { table:'SCK', label:'Conferência Recebimento', desc:'Almoxarife confere fisicamente qtd pedida × recebida antes de liberar NF.' },
+      { table:'SF1', label:'NF de Entrada (Cabeçalho)', desc:'Fiscal registra a nota do fornecedor. Campos: F1_DOC, F1_FORNECE, F1_EMISSAO.' },
+      { table:'SD1', label:'Itens da NF de Entrada', desc:'Produtos recebidos com qtd, valor e TES. Alimenta estoque (SB2) e custo (SB9).' },
+      { table:'SE2', label:'Título a Pagar', desc:'Financeiro gera a obrigação de pagamento. Campos: E2_NUM, E2_VENCREA, E2_VALOR.' },
+      { table:'SE5', label:'Baixa / Pagamento', desc:'Tesoureiro registra o pagamento. Título baixado em SE2, movimento em SE5.' },
+    ],
+    questions:[
+      { q:'No fluxo P2P, qual tabela vem LOGO ANTES da NF de Entrada (SF1)?', a:'SCK', wrong:['SC7','SD1','SE2'], fb:'A Conferência de Recebimento (SCK) valida fisicamente o material antes do lançamento fiscal da NF (SF1).' },
+      { q:'A NF de entrada foi lançada em SF1. Qual tabela recebe os ITENS desta nota?', a:'SD1', wrong:['SC7','SB2','SE2'], fb:'SD1 armazena os itens de cada NF de entrada: produto, qtd, valor unitário e TES.' },
+      { q:'Qual tabela NO FINAL do fluxo P2P registra o PAGAMENTO ao fornecedor?', a:'SE5', wrong:['SE2','SEA','SA6'], fb:'SE5 é a tabela de movimentos bancários onde a baixa do título a pagar (SE2) é registrada.' },
+      { q:'Uma SC1 foi criada. Qual é o PRÓXIMO PASSO no fluxo P2P?', a:'SC7', wrong:['SF1','SD1','SE2'], fb:'Depois da Solicitação (SC1), o departamento de Compras cria o Pedido de Compra (SC7) junto ao fornecedor.' },
+    ]
+  },
+  {
+    id:'o2c', name:'Order to Cash — Vendas', icon:'💰',
+    color:'#10B981', desc:'Do pedido do cliente até o recebimento do pagamento na conta bancária.',
+    steps:[
+      { table:'SC5', label:'Pedido de Venda', desc:'Cliente faz o pedido. Campos: C5_NUM, C5_CLIENTE, C5_CONDPAG, C5_VLTOTAL.' },
+      { table:'SC9', label:'Liberação de Crédito', desc:'Financeiro analisa limite de crédito do cliente e libera o pedido para faturamento.' },
+      { table:'SC6', label:'Itens do Pedido', desc:'Produtos solicitados com qtd e preço. Liga SC5 ao SB1. Campo C6_QTDVEN.' },
+      { table:'SF2', label:'NF de Saída (Cabeçalho)', desc:'Faturamento emite a NF-e. Campos: F2_DOC, F2_CLIENTE, F2_EMISSAO, F2_CHVNFE.' },
+      { table:'SD2', label:'Itens da NF de Saída', desc:'Produtos faturados com qtd, preço e TES. Alimenta análises de faturamento e margem.' },
+      { table:'SE1', label:'Título a Receber', desc:'Financeiro gera a cobrança. Campos: E1_NUM, E1_VENCREA, E1_VALOR, E1_SALDO.' },
+      { table:'SE5', label:'Baixa / Recebimento', desc:'Cliente paga. Título baixado em SE1, movimento bancário registrado em SE5.' },
+    ],
+    questions:[
+      { q:'No fluxo O2C, qual tabela representa os ITENS do pedido de venda?', a:'SC6', wrong:['SC5','SD2','SF2'], fb:'SC6 tem os itens (C6_PRODUTO, C6_QTDVEN, C6_PRCVEN). SC5 é apenas o cabeçalho.' },
+      { q:'Após emitir a NF de saída (SF2), qual tabela é gerada no financeiro?', a:'SE1', wrong:['SE2','SE5','SDA'], fb:'A NF de saída gera automaticamente um Título a Receber (SE1) com vencimento e valor.' },
+      { q:'O cliente tem limite de crédito bloqueado. Qual tabela controla a LIBERAÇÃO do pedido?', a:'SC9', wrong:['SC5','SC6','SE1'], fb:'SC9 armazena os pedidos pendentes de liberação de crédito. Só após liberação o faturamento emite a NF.' },
+      { q:'Qual tabela do O2C contém a CHAVE DE ACESSO da NF-e (campo F2_CHVNFE)?', a:'SF2', wrong:['SD2','SFJ','SC5'], fb:'SF2 é o cabeçalho da NF de saída. Contém F2_CHVNFE (44 dígitos) e o status de autorização SEFAZ.' },
+    ]
+  },
+  {
+    id:'estoque', name:'Movimentação de Estoque', icon:'📦',
+    color:'#7C3AED', desc:'Como o Protheus controla entradas, saídas e saldos de estoque em tempo real.',
+    steps:[
+      { table:'SB1', label:'Cadastro do Produto', desc:'Produto deve existir no mestre antes de qualquer movimentação. Campos: B1_COD, B1_DESC, B1_UM.' },
+      { table:'SB2', label:'Saldo em Estoque', desc:'Controla quantidade disponível, empenho, reserva e saldo por produto+armazém.' },
+      { table:'SB9', label:'Custo Médio', desc:'Custo médio ponderado atualizado a cada entrada. Campo B9_CM1. Base para CMV e margem.' },
+      { table:'SBK', label:'Endereçamento (WMS)', desc:'Localização física do produto no armazém: corredor, prateleira, posição.' },
+      { table:'SD3', label:'Movimentos Internos', desc:'Transferências, ajustes e baixas de produção. TM define o tipo de movimento.' },
+      { table:'SB3', label:'Inventário Físico', desc:'Comparação saldo sistema × contagem física. Ajuste de divergências.' },
+    ],
+    questions:[
+      { q:'Um produto entrou no estoque via NF. Qual tabela de SALDO é atualizada?', a:'SB2', wrong:['SB1','SB9','SD3'], fb:'SB2 atualiza B2_QATU (quantidade atual) a cada entrada ou saída. SB9 atualiza o custo médio em paralelo.' },
+      { q:'Para saber o CUSTO MÉDIO PONDERADO de um produto hoje, qual campo e tabela usar?', a:'SB9', wrong:['SB2','SB1','SD3'], fb:'SB9.B9_CM1 é o custo médio em moeda corrente. Atualizado automaticamente a cada entrada de NF.' },
+      { q:'O almoxarife fez uma TRANSFERÊNCIA entre armazéns internamente. Qual tabela registra isso?', a:'SD3', wrong:['SBT','SB2','SF1'], fb:'SD3 registra movimentos internos (TM 99 = transferência, TM 98 = ajuste). SB2 é atualizado consequentemente.' },
+      { q:'Na contagem do inventário físico, a diferença entre sistema e físico fica em qual tabela?', a:'SB3', wrong:['SB2','SD3','SBK'], fb:'SB3 armazena B3_QUANT (sistema) e B3_QINV (contagem física). A diferença gera SD3 de ajuste.' },
+    ]
+  },
+  {
+    id:'pcp', name:'Planejamento e Produção (PCP)', icon:'⚙️',
+    color:'#F59E0B', desc:'Do planejamento de materiais à ordem de produção até o apontamento e entrega ao estoque.',
+    steps:[
+      { table:'SG1', label:'Estrutura (BOM)', desc:'Lista de materiais: produto pai → componentes. Base do MRP. Campos: G1_COD, G1_COMP, G1_QUANT.' },
+      { table:'SFC3', label:'MRP / Previsão', desc:'Planejamento de necessidades: MR_PRODUTO, MR_DATA, MR_NECRES. Gera SC1 de compra.' },
+      { table:'SFC', label:'Ordem de Produção', desc:'OP emitida. Campos: C2_NUM, C2_PRODUTO, C2_QUANT, C2_EMISSAO, C2_DATPRF.' },
+      { table:'SFD', label:'Componentes da OP', desc:'Lista de componentes reservados para a OP. Alimentada pela estrutura (SG1).' },
+      { table:'SPC', label:'Apontamento de Produção', desc:'Produção informa horas trabalhadas e quantidade produzida. Campos: PC_ORDEM, PC_HORAS.' },
+      { table:'SD3', label:'Baixa de Componentes', desc:'Componentes consumidos são baixados do estoque via SD3 (TM = tipo de movimento de produção).' },
+      { table:'SB2', label:'Entrada do PA no Estoque', desc:'Produto acabado entra no estoque via SD3. SB2 atualiza B2_QATU do produto acabado.' },
+    ],
+    questions:[
+      { q:'Qual tabela define quais COMPONENTES são necessários para fabricar um produto acabado (BOM)?', a:'SG1', wrong:['SFD','SFC','SPC'], fb:'SG1 é a estrutura pai-filho. G1_COD = produto pai, G1_COMP = componente, G1_QUANT = quantidade necessária.' },
+      { q:'A OP foi emitida. Qual tabela armazena o CABEÇALHO da Ordem de Produção?', a:'SFC', wrong:['SFD','SG1','SPC'], fb:'SFC tem C2_NUM (número da OP), C2_PRODUTO, C2_QUANT (quantidade a produzir) e C2_DATPRF (prazo).' },
+      { q:'O operador informou quantas horas trabalhou na OP. Qual tabela recebe esse APONTAMENTO?', a:'SPC', wrong:['SFC','SFD','SD3'], fb:'SPC registra apontamentos: PC_ORDEM, PC_OPERAC (operação), PC_HORAS, PC_QUANT (qtd produzida).' },
+      { q:'O MRP calculou a necessidade de compra de um componente. Qual tabela armazena essa PREVISÃO?', a:'SFC3', wrong:['SC1','SG1','SFC'], fb:'SFC3 (tabela SMR010) armazena as previsões do MRP. A partir delas, o Protheus sugere criação de SC1 (Solicitações de Compra).' },
+    ]
+  },
+  {
+    id:'financeiro', name:'Ciclo Financeiro Completo', icon:'💳',
+    color:'#EF4444', desc:'Gestão de títulos a receber e a pagar, baixas e movimentação bancária.',
+    steps:[
+      { table:'SE1', label:'Título a Receber', desc:'Gerado automaticamente pela NF de saída. Campos: E1_NUM, E1_CLIENTE, E1_VENCREA, E1_VALOR, E1_SALDO.' },
+      { table:'SE2', label:'Título a Pagar', desc:'Gerado pela NF de entrada. Campos: E2_NUM, E2_FORNECE, E2_VENCREA, E2_VALOR, E2_SALDO.' },
+      { table:'SEA', label:'Borderô de Cobrança', desc:'Agrupa títulos SE1 para remessa bancária. EA_NUMBOR, EA_BANCO, EA_VALOR.' },
+      { table:'SA6', label:'Cadastro de Bancos', desc:'Contas bancárias da empresa. A6_COD, A6_AGENCIA, A6_NUMCON.' },
+      { table:'SE5', label:'Movimentos Bancários', desc:'Baixas e lançamentos bancários. E5_DATA, E5_BANCO, E5_VALOR, E5_TIPO.' },
+    ],
+    questions:[
+      { q:'Um cliente pagou o boleto. Em qual tabela a BAIXA do título é registrada?', a:'SE1', wrong:['SE5','SE2','SEA'], fb:'O título (SE1) é baixado: E1_BAIXA recebe a data de pagamento e E1_SALDO vai a zero. SE5 registra o movimento bancário.' },
+      { q:'Para saber o SALDO DISPONÍVEL em cada conta bancária, qual tabela consultar?', a:'SA6', wrong:['SE5','SEA','SMK'], fb:'SA6 tem o cadastro de contas (A6_SALDO). SE5 tem os movimentos de cada conta.' },
+      { q:'Qual tabela agrupa vários títulos a receber para envio ao banco (remessa de cobrança)?', a:'SEA', wrong:['SE5','SE1','SA6'], fb:'SEA é o Borderô. Agrupa títulos SE1 por banco para envio em lote (CNAB240/400).' },
+      { q:'O financeiro quer saber quais TÍTULOS VENCEM nos próximos 7 dias. Qual tabela e campo usar?', a:'SE1', wrong:['SE2','SE5','SDA'], fb:'SE1.E1_VENCREA é a data real de vencimento. Filtrando E1_BAIXA = " " e E1_SALDO > 0 você tem os abertos futuros.' },
+    ]
+  },
+];
+
+// ====================== ARCHITECTURE TOPICS ======================
+const ARCH_TOPICS = [
+  // CAMADAS
+  { term:'SmartClient', category:'Camadas', def:'Interface gráfica do usuário Protheus. Executável que conecta ao Application Server via TCP/IP. Não processa regras de negócio — apenas renderiza telas e envia eventos ao servidor.', example:'O usuário abre o Protheus no Windows: está usando o SmartClient. Toda lógica AdvPL roda no servidor.', why:'Em suporte, erros de tela quase sempre são no SmartClient ou na comunicação com o AppServer.' },
+  { term:'Application Server (AppServer)', category:'Camadas', def:'Servidor de aplicação do Protheus. Processa todo o código AdvPL/TLPP, gerencia sessões e se comunica com o DBAccess para acesso ao banco. Configurado via Protheus.ini.', example:'O AppServer responde na porta 1234. O SmartClient conecta nessa porta. O RPO fica no AppServer.', why:'Saber configurar e monitorar o AppServer é obrigatório para qualquer papel técnico.' },
+  { term:'DBAccess', category:'Camadas', def:'Middleware de acesso a banco de dados do Protheus. Faz a tradução entre o AdvPL e o banco real (SQL Server, Oracle, PostgreSQL). Configurado via DBAccess.ini.', example:'AppServer pede "SELECT * FROM SB1010". DBAccess traduz e executa no SQL Server.', why:'Erros de "DBAccess offline" ou lentidão de banco sempre passam por aqui.' },
+  { term:'RPO (Repository)', category:'Camadas', def:'Arquivo binário que contém todo o código compilado do Protheus (.rpo). Inclui fontes padrão TOTVS e customizações. Cada versão do Protheus tem um RPO compatível.', example:'Ao customizar com AdvPL, você compila o fonte e ele é incorporado ao RPO. Rollback = restaurar o RPO anterior.', why:'"Atualizar o RPO" é o deploy do Protheus. Fundamental para entender versionamento e aplicação de patches.' },
+  { term:'Top Connect / ODBC', category:'Camadas', def:'Protocolo de comunicação entre o DBAccess e o banco de dados. Top Connect é proprietário TOTVS. ODBC é o modo alternativo para bancos não homologados.', example:'DBAccess.ini define o TopConnect apontando para o SQL Server na porta 7890.', why:'Configuração incorreta do TopConnect é causa frequente de erros de conexão no ambiente.' },
+  // DICIONÁRIO
+  { term:'SX2 — Tabelas', category:'Dicionário', def:'Tabela mestre do dicionário. Cada registro representa uma tabela do Protheus. X2_CHAVE = código da tabela, X2_NOME = descrição, X2_ROTINA = rotina AdvPL que a gerencia.', example:'SX2 onde X2_CHAVE = "SB1" → Cadastro de Produtos, rotina MATA010.', why:'Para entender qualquer tabela, o primeiro passo é buscar em SX2 o nome e a rotina responsável.' },
+  { term:'SX3 — Campos', category:'Dicionário', def:'Dicionário de campos. Cada registro define um campo de uma tabela: X3_ARQUIVO (tabela), X3_CAMPO (nome), X3_TIPO (C/N/D/L/M), X3_TAMANHO, X3_TITULO, X3_VALID (validação), X3_CONTEXT (Real/Virtual).', example:'SX3 onde X3_ARQUIVO="SB1" e X3_CAMPO="B1_COD" → Cód. Produto, Char(15).', why:'Todo campo do Protheus passa pelo SX3. Customizar um campo = alterar SX3 via Configurador.' },
+  { term:'SX5 — Tabelas Genéricas / Domínios', category:'Dicionário', def:'Tabelas de domínio lookup. X5_TABELA = código da tabela, X5_CHAVE = valor, X5_DESCRI = descrição. Usadas em combos e validações de campos.', example:'X5_TABELA="01" = tipos de produto. Campos B1_TIPO usam SX5 tabela "01" para validar.', why:'Quando um campo tem lista de valores predefinidos, os valores vêm do SX5 (ou de uma tabela F3).' },
+  { term:'SX6 — Parâmetros (MV_)', category:'Dicionário', def:'Parâmetros do sistema Protheus. X6_VAR = nome do parâmetro (MV_xxx), X6_TIPO, X6_CONTEUD = valor atual. Controlam comportamento de cada módulo.', example:'MV_LOCPAD = armazém padrão. MV_ESTOQUE = controla se baixa estoque na venda. Mais de 10.000 parâmetros.', why:'Comportamento inesperado do sistema quase sempre é parâmetro MV_ configurado incorretamente.' },
+  { term:'SX7 — Gatilhos de Campo', category:'Dicionário', def:'Gatilhos (triggers) de campos. Quando um campo é preenchido, o Protheus busca em SX7/SXD e preenche automaticamente outros campos. XD_CAMPO = campo origem, XD_CAMPO2 = campo destino.', example:'Ao preencher o código do produto (B1_COD) num pedido, o Protheus busca B1_DESC automaticamente via gatilho.', why:'Entender gatilhos é essencial para customizar telas sem quebrar o comportamento padrão.' },
+  { term:'SX9 — Relacionamentos', category:'Dicionário', def:'Relacionamentos entre tabelas. X9_DOMINIO = tabela origem, X9_DTALIAS = tabela destino, X9_EXPDOM = expressão de join (chave do domínio), X9_EXPIMA = chave da tabela destino. Define 1:1, 1:N e N:N.', example:'SX9: SB1 → SB2 via X9_EXPDOM="B1_COD" e X9_EXPIMA="B2_COD". 1 produto tem N saldos.', why:'Para entender JOINs corretos entre tabelas, sempre consulte SX9 antes de escrever SQL.' },
+  // CONVENÇÕES
+  { term:'Prefixo SA — Cadastros', category:'Nomenclatura', def:'Tabelas com prefixo SA são cadastros mestres: SA1 (Clientes), SA2 (Fornecedores), SA3 (Vendedores), SA4 (Transportadoras), SA6 (Bancos). O "A" remete a "Arquivo Mestre".', example:'SA1 = Clientes. SA2 = Fornecedores. Todo relacionamento começa aqui.', why:'Qualquer dashboard que envolva nome de cliente ou fornecedor passa por SA1 ou SA2.' },
+  { term:'Prefixo SB — Estoque', category:'Nomenclatura', def:'Tabelas SB são do módulo de Estoque: SB1 (Produtos), SB2 (Saldos), SB3 (Inventário), SB4 (Endereços), SB5 (Complemento), SB6 (Referências), SB7 (Curva ABC), SB8 (Lotes), SB9 (Custos).', example:'SB1=cadastro, SB2=saldo, SB9=custo. Para qualquer análise de estoque, começa em SB2.', why:'Dominar a família SB é essencial: é onde ficam os dados mais consultados em BI industrial.' },
+  { term:'Prefixo SC — Compras/Vendas/PCP', category:'Nomenclatura', def:'SC é família mista: SC1 (Solicitações de Compra), SC5 (Pedido de Venda — cabeçalho), SC6 (Itens do Pedido de Venda), SC7 (Pedido de Compra), SC9 (Pedidos liberados). O módulo define o contexto.', example:'SC5+SC6 = processo de vendas. SC1+SC7 = processo de compras. Mesma família, módulos diferentes.', why:'Confundir SC5 (venda) com SC7 (compra) é erro clássico. Sempre confirmar o módulo.' },
+  { term:'Prefixo SD — Documentos/Movimentos', category:'Nomenclatura', def:'SD é a família de itens de documentos e movimentos: SD1 (itens NF entrada), SD2 (itens NF saída), SD3 (movimentos internos). "D" remete a "Documento" e "Detalhe".', example:'SF1 (cabeçalho NF entrada) ↔ SD1 (itens). SF2 (cabeçalho NF saída) ↔ SD2 (itens). Sempre cabeçalho+itens.', why:'SD2 é a tabela mais importante para BI de vendas. SD1 para BI de compras.' },
+  { term:'Prefixo SE — Financeiro', category:'Nomenclatura', def:'SE é financeiro: SE1 (Contas a Receber), SE2 (Contas a Pagar), SE4 (Condições de Pagamento), SE5 (Movimentos Bancários). "E" remete a "Estoque Financeiro" (títulos).', example:'Ciclo financeiro: NF saída → SE1 → baixa em SE5. NF entrada → SE2 → baixa em SE5.', why:'SE1+SE2 são as tabelas de maior valor para dashboards financeiros e fluxo de caixa.' },
+  { term:'Prefixo SF — Faturamento/Fiscal', category:'Nomenclatura', def:'SF é o módulo fiscal: SF1 (NF entrada cabeçalho), SF2 (NF saída cabeçalho), SF3 (Livro Fiscal), SF4 (TES — Tipos de Entrada/Saída), SFT (Tributação por produto/UF).', example:'SF1+SD1 = nota de entrada completa. SF2+SD2 = nota de saída completa. TES = configuração fiscal da operação.', why:'Qualquer análise fiscal ou de faturamento passa pela família SF.' },
+  // CAMPOS DE CONTROLE
+  { term:'Campo D_E_L_E_T_', category:'Campos de Controle', def:'Campo de soft delete presente em TODAS as tabelas do Protheus. Quando D_E_L_E_T_ = "*", o registro está logicamente excluído. Quando = " " (espaço), está ativo. NUNCA faça DELETE físico nas tabelas Protheus.', example:'WHERE D_E_L_E_T_ = " " — filtra apenas registros ativos. Omitir este filtro traz registros excluídos.', why:'Esquecer o filtro D_E_L_E_T_ é o erro SQL mais comum em consultas Protheus. Sempre inclua.' },
+  { term:'Campo _FILIAL', category:'Campos de Controle', def:'Cada tabela tem um campo de filial (ex: B1_FILIAL, E1_FILIAL) que separa os dados por filial da empresa. Fundamental em ambientes multifilial. Sempre filtre pelo menos por filial.', example:'WHERE B2_FILIAL = "01" — traz saldo apenas da filial 01. Sem o filtro, soma todas as filiais.', why:'Dashboard mostrando saldo errado? Primeiro suspeito: falta de filtro por filial.' },
+  { term:'Campo R_E_C_N_O_', category:'Campos de Controle', def:'Número de registro físico (RECNO) — identificador único interno de cada registro na tabela. Não é chave de negócio, mas é usado em performance e em rotinas AdvPL para navegação direta.', example:'DbGoTo(nRecno) em AdvPL — vai direto ao registro pelo RECNO sem varrer índice.', why:'Entender RECNO é necessário para otimizar rotinas AdvPL e entender queries com RECNO em JOINs.' },
+  // CUSTOMIZAÇÃO
+  { term:'Ponto de Entrada (PE)', category:'Customização', def:'Hook de customização do Protheus. Permite inserir código AdvPL em pontos específicos do processo padrão sem alterar o fonte original TOTVS. Nome do PE é definido por convenção (ex: MT010OK, MT010BWS).', example:'PE "MT010OK" → executado após salvar um produto em MATA010. Ideal para validações extras ou integrações.', why:'Usar PE em vez de alterar o fonte padrão garante compatibilidade com atualizações de RPO.' },
+  { term:'ExecAuto / MSExecAuto', category:'Customização', def:'Função AdvPL para executar automaticamente rotinas do Protheus via código, simulando a interação do usuário. Muito usada em integrações e importações em lote.', example:'MSExecAuto({|x,y| MATA010(x,y)}, aRet, 3) — cria/altera produto via código sem abrir tela.', why:'Toda integração com Protheus por dentro usa ExecAuto. Entender seus parâmetros é essencial.' },
+  { term:'User Function vs Function', category:'Customização', def:'User Function é acessível externamente (pode ser chamada de outros fontes, PE, ou pelo usuário via execução direta). Function tem escopo local ao fonte. Static Function é privada ao arquivo.', example:'User Function zMeuCodigo() — pode ser chamada de qualquer lugar. Function privada() — só dentro do mesmo fonte.', why:'Erro "função não encontrada" frequentemente acontece por usar Function em vez de User Function.' },
+  { term:'Multiempresa e Multifilial', category:'Arquitetura', def:'Empresa = grupo econômico (código 2 chars, ex: "99"). Filial = unidade de negócio (código 2 chars, ex: "01", "02"). Um RPO pode atender múltiplas empresas+filiais. Tabelas compartilhadas vs exclusivas definidas no SX2 (X2_MODO).', example:'Empresa 01, Filial 01 = São Paulo. Empresa 01, Filial 02 = Betim. SX2.X2_MODO = "C" (Compartilhada) ou "E" (Exclusiva).', why:'Ambiente multifilial impacta todo SQL: sempre filtrar _FILIAL. Entender X2_MODO evita erros de cadastro duplicado.' },
+  { term:'SIGAADV (Configurador)', category:'Arquitetura', def:'Módulo de configuração do Protheus. Acesso via menu Miscelânea > Configurador. Onde se altera dicionário (SX2/SX3), parâmetros (SX6), menus, grupos de usuários e permissões.', example:'Para adicionar um campo customizado "B1_ZOBS" ao produto: abrir Configurador > Dicionário > Campos > SB1.', why:'O Configurador é a ferramenta número 1 do consultor funcional. Toda customização começa aqui.' },
+];
+
+// ====================== CONSULTING SCENARIOS ======================
+const CONSULT_SCENARIOS = [
+  {
+    id:'s1', module:'Estoque',
+    situation:'Cliente reclama que o saldo de estoque no sistema não bate com a contagem física do armazém. O produto aparece com 150 unidades no sistema mas o físico tem apenas 120.',
+    question:'Qual é a sequência CORRETA de investigação?',
+    options:[
+      'Checar B2_QATU (SB2) + movimentos SD3 pendentes + reservas/empenhos não baixados',
+      'Deletar o cadastro do produto e recadastrar do zero',
+      'Reinstalar o módulo de estoque do Protheus',
+      'Aumentar manualmente o campo B2_QATU via UPDATE direto no banco'
+    ],
+    correct:'Checar B2_QATU (SB2) + movimentos SD3 pendentes + reservas/empenhos não baixados',
+    explanation:'Divergência de estoque quase sempre vem de: (1) reserva/empenho não baixado, (2) SD3 não processado, (3) NF entrada/saída não contabilizada. NUNCA faça UPDATE manual em tabelas Protheus — o Protheus mantém consistência via rotinas internas.',
+    table:'SB2', sql:`-- Identificar divergência
+SELECT B2_COD, B2_QATU AS SISTEMA,
+  B2_RESERVA, B2_EMPENHO, B2_SALPEDVEN,
+  (B2_QATU - B2_RESERVA - B2_EMPENHO) AS DISPONIVEL
+FROM SB2010
+WHERE B2_FILIAL='01' AND B2_COD='PROD001' AND D_E_L_E_T_=' '`
+  },
+  {
+    id:'s2', module:'Financeiro',
+    situation:'O controller reclama que o relatório de contas a receber está trazendo títulos que já foram pagos há meses. O total está muito maior do que deveria.',
+    question:'Qual é a causa mais provável e como confirmar?',
+    options:[
+      'Títulos com E1_BAIXA em branco mas E1_SALDO = 0 — baixa incompleta ou bug de baixa',
+      'Bug no módulo financeiro — reinstalar o Protheus',
+      'Os clientes não pagaram e o sistema está correto',
+      'Problema no DBAccess — reiniciar o serviço resolve'
+    ],
+    correct:'Títulos com E1_BAIXA em branco mas E1_SALDO = 0 — baixa incompleta ou bug de baixa',
+    explanation:'Títulos em SE1 com E1_BAIXA=" " (não baixado) mas E1_SALDO=0 são "fantasmas" — foram pagos mas a baixa não atualizou E1_BAIXA. Filtre sempre por E1_SALDO > 0 além de E1_BAIXA para relatórios precisos.',
+    table:'SE1', sql:`-- Identificar títulos com problema de baixa
+SELECT E1_NUM, E1_PARCELA, E1_CLIENTE,
+  E1_VENCREA, E1_VALOR, E1_SALDO, E1_BAIXA
+FROM SE1010
+WHERE E1_FILIAL='01'
+  AND E1_BAIXA = ' '  -- não baixado...
+  AND E1_SALDO = 0    -- ...mas saldo zerado = inconsistência!
+  AND D_E_L_E_T_=' '`
+  },
+  {
+    id:'s3', module:'Fiscal',
+    situation:'Ao tentar emitir uma NF-e de venda interestadual de MG para SP, o sistema rejeita com erro "alíquota de ICMS não encontrada". O produto existe, o cliente existe, o TES está configurado.',
+    question:'Qual é o PRIMEIRO lugar a verificar?',
+    options:[
+      'Tabela SFT — tributação do produto para o estado SP está cadastrada?',
+      'Recadastrar o cliente com endereço de SP',
+      'Alterar a alíquota direto na NF durante a emissão',
+      'Desativar a validação fiscal no parâmetro MV_CALCICM'
+    ],
+    correct:'Tabela SFT — tributação do produto para o estado SP está cadastrada?',
+    explanation:'O Protheus busca a alíquota de ICMS em SFT cruzando produto × estado de destino. Se não encontrar o registro FT_PRODUTO + FT_ESTADO="SP", rejeita a emissão. Solução: cadastrar a tributação no SIGAFIS > Tributação.',
+    table:'SFT', sql:`-- Verificar se tributação existe para SP
+SELECT FT_PRODUTO, FT_ESTADO, FT_ALIQ, FT_TRIB
+FROM SFT010
+WHERE FT_FILIAL='01'
+  AND FT_PRODUTO='SEU_PRODUTO'
+  AND FT_ESTADO='SP'
+  AND D_E_L_E_T_=' '
+-- Se não retornar nenhuma linha = cadastrar tributação`
+  },
+  {
+    id:'s4', module:'Compras',
+    situation:'O gerente de compras diz que o sistema gerou pedidos de compra duplicados. O mesmo produto aparece em 2 pedidos com a mesma quantidade para o mesmo fornecedor.',
+    question:'Como investigar a origem da duplicação?',
+    options:[
+      'Verificar se a SC1 (Solicitação) foi convertida em pedido mais de uma vez ou se houve duplo clique na confirmação',
+      'Apagar um dos pedidos diretamente no banco via DELETE',
+      'O fornecedor enviou duas propostas iguais — culpa externa',
+      'Reiniciar o AppServer para limpar cache de sessão'
+    ],
+    correct:'Verificar se a SC1 (Solicitação) foi convertida em pedido mais de uma vez ou se houve duplo clique na confirmação',
+    explanation:'Duplicação de SC7 quase sempre tem uma de duas origens: (1) duplo clique/processamento duplicado do usuário ao confirmar o pedido, (2) SC1 que aparecia como "não atendida" e foi convertida duas vezes. Verifique C7_SC1 (referência à SC1 de origem) para rastrear.',
+    table:'SC7', sql:`-- Identificar pedidos duplicados
+SELECT C7_PRODUTO, C7_FORNECE, C7_QUANT,
+  COUNT(*) AS QTDE_PEDIDOS,
+  STRING_AGG(C7_NUM, ', ') AS NUMEROS
+FROM SC7010
+WHERE C7_FILIAL='01'
+  AND C7_EMISSAO >= '20240101'
+  AND D_E_L_E_T_=' '
+GROUP BY C7_PRODUTO, C7_FORNECE, C7_QUANT
+HAVING COUNT(*) > 1`
+  },
+  {
+    id:'s5', module:'Dicionário',
+    situation:'Um desenvolvedor júnior foi contratado e fez um UPDATE direto no banco SQL para corrigir um valor em SE1 (título a receber). Agora o módulo financeiro está apresentando comportamento errático — alguns totais não batem.',
+    question:'Por que fazer UPDATE direto em tabelas Protheus é perigoso?',
+    options:[
+      'O Protheus mantém integridade via rotinas AdvPL — UPDATE direto pula gatilhos, índices e tabelas auxiliares relacionadas',
+      'É proibido pela LGPD alterar dados financeiros',
+      'O SQL Server não suporta UPDATE em tabelas com D_E_L_E_T_',
+      'O AppServer cria lock na tabela impedindo o UPDATE'
+    ],
+    correct:'O Protheus mantém integridade via rotinas AdvPL — UPDATE direto pula gatilhos, índices e tabelas auxiliares relacionadas',
+    explanation:'Quando você baixa um título via rotina, o Protheus atualiza SE1, SE5, saldo bancário em SA6, e dispara contabilização em CT1. Um UPDATE direto em SE1 não faz nada disso — cria inconsistência entre módulos. SEMPRE use as rotinas do sistema (ExecAuto para programático).',
+    table:'SX9', sql:`-- Ver o que é atualizado junto com SE1
+SELECT X9_DOMINIO, X9_DTALIAS, X9_EXPDOM
+FROM SX9010
+WHERE X9_DOMINIO = 'SE1'
+  AND D_E_L_E_T_=' '
+-- Mostra todas as tabelas relacionadas que devem ser atualizadas junto`
+  },
+  {
+    id:'s6', module:'Estoque',
+    situation:'O custo médio de um produto no SB9 está zerado (B9_CM1 = 0), mas o produto tem saldo em SB2. O Power BI está mostrando valor de estoque = R$ 0,00 para este item.',
+    question:'Qual é a causa mais provável e a solução?',
+    options:[
+      'Produto foi lançado via SD3 de ajuste sem informar custo — reprocessar entrada com custo correto via NF ou ajuste de custo',
+      'Bug no DBAccess — reiniciar o serviço',
+      'O produto não tem preço de venda cadastrado em SAB',
+      'Parâmetro MV_CUSTO1 está desativado'
+    ],
+    correct:'Produto foi lançado via SD3 de ajuste sem informar custo — reprocessar entrada com custo correto via NF ou ajuste de custo',
+    explanation:'B9_CM1=0 com B2_QATU>0 significa que o produto entrou no estoque sem custo informado — comum em ajustes de inventário (SD3) sem preencher D3_CUSTO. Solução: emitir entrada de custo via SIGAEST > Ajuste de Custo, ou cancelar e relançar a entrada com custo correto.',
+    table:'SB9', sql:`-- Identificar produtos com saldo mas custo zero
+SELECT B2_COD, B1_DESC, B2_QATU,
+  B9_CM1 AS CUSTO_MEDIO,
+  (B2_QATU * B9_CM1) AS VALOR_ESTOQUE
+FROM SB2010 B2
+INNER JOIN SB9010 B9 ON B9_COD=B2_COD AND B9_FILIAL=B2_FILIAL AND B9.D_E_L_E_T_=' '
+INNER JOIN SB1010 B1 ON B1_COD=B2_COD AND B1_FILIAL=B2_FILIAL AND B1.D_E_L_E_T_=' '
+WHERE B2_FILIAL='01' AND B2_QATU > 0 AND B9_CM1 = 0 AND B2.D_E_L_E_T_=' '`
+  },
+  {
+    id:'s7', module:'Sistema',
+    situation:'Usuário liga reclamando que não consegue acessar o módulo de Faturamento. Aparece "Acesso negado ao programa MATA460". Outros usuários do mesmo grupo conseguem acessar.',
+    question:'Onde investigar o problema de permissão?',
+    options:[
+      'Configurador > Usuários > Grupos de Acesso — verificar se o usuário está no grupo correto e se o grupo tem permissão ao MATA460',
+      'Reinstalar o SmartClient na máquina do usuário',
+      'Fazer UPDATE na tabela SYS_USR para liberar o acesso',
+      'O problema é na licença do Protheus — contactar TOTVS'
+    ],
+    correct:'Configurador > Usuários > Grupos de Acesso — verificar se o usuário está no grupo correto e se o grupo tem permissão ao MATA460',
+    explanation:'Permissões no Protheus são gerenciadas por Grupos de Acesso no Configurador (SIGACFG). Cada rotina (MATA460 = Nota Fiscal de Saída) pode ter acesso liberado por grupo. O usuário pode ter sido removido do grupo ou o grupo pode ter perdido a permissão.',
+    table:'SYS_USR', sql:`-- Verificar grupo do usuário
+SELECT US_COD, US_NOME, US_GRUPO, US_MSBLQL
+FROM SYS_USR
+WHERE US_COD = 'LOGIN_USUARIO'
+  AND D_E_L_E_T_=' '`
+  },
+  {
+    id:'s8', module:'PCP',
+    situation:'A Ordem de Produção foi encerrada mas o sistema não baixou os componentes do estoque. O saldo em SB2 dos componentes permanece inalterado mesmo após o encerramento da OP.',
+    question:'Qual é a causa e onde investigar?',
+    options:[
+      'O TES da OP ou parâmetro MV_ESTOQUE está configurado para não baixar estoque automaticamente — verificar SD3 se movimentos foram gerados',
+      'O produto acabado não tem estrutura em SG1',
+      'O AppServer caiu durante o encerramento — reiniciar resolve',
+      'Bug na versão do Protheus — abrir chamado na TOTVS'
+    ],
+    correct:'O TES da OP ou parâmetro MV_ESTOQUE está configurado para não baixar estoque automaticamente — verificar SD3 se movimentos foram gerados',
+    explanation:'A baixa de componentes ao encerrar OP gera SD3. Se SD3 não foi gerado, verifique: (1) MV_ESTOQUE = T (True) habilita baixa automática; (2) o TES associado à OP deve ter F4_ESTOQUE="S"; (3) verifique se há registro em SD3 com D3_OP igual ao número da OP.',
+    table:'SFC', sql:`-- Verificar se OP tem movimentos em SD3
+SELECT D3_OP, D3_COD, D3_QUANT, D3_EMISSAO, D3_TM
+FROM SD3010
+WHERE D3_FILIAL='01'
+  AND D3_OP='000001'   -- número da OP
+  AND D_E_L_E_T_=' '
+-- Se não retornar nada: baixa não foi gerada`
+  },
+];
+
+// ====================== FLOW QUIZ QUESTIONS ======================
+function buildFlowQuestion(pool) {
+  const proc = PROCESSES[Math.floor(Math.random()*PROCESSES.length)];
+  const qs = proc.questions;
+  const q = qs[Math.floor(Math.random()*qs.length)];
+  return {
+    type:'🔄 Fluxo de Processo', xp: 20,
+    text: `[${proc.name}] ${q.q}`,
+    context: proc.steps.map(s=>`${s.table} → ${s.label}`).join(' | '),
+    options: shuffle([q.a, ...q.wrong]),
+    correct: q.a,
+    feedback: q.fb,
+    sql: proc.steps.find(s=>s.table===q.a)?.desc || ''
+  };
+}
+
+// ====================== ARCH QUIZ QUESTIONS ======================
+const ARCH_QUESTIONS = [
+  // Camadas
+  { q:'Qual componente do Protheus processa todo o código AdvPL e gerencia as sessões dos usuários?', a:'Application Server (AppServer)', wrong:['SmartClient','DBAccess','RPO'], fb:'O AppServer é o motor do Protheus. SmartClient só renderiza. DBAccess acessa o banco. RPO é o código compilado.' },
+  { q:'O que é o RPO no contexto do Protheus?', a:'Arquivo binário com todo o código compilado (fontes padrão + customizações)', wrong:['Banco de dados do sistema','Interface gráfica do usuário','Middleware de acesso ao SQL Server'], fb:'RPO = Repository. Contém todo o AdvPL compilado. "Atualizar o RPO" = fazer deploy de novas versões ou customizações.' },
+  { q:'Qual componente faz a tradução entre o AdvPL e o banco de dados real (SQL Server, Oracle)?', a:'DBAccess', wrong:['SmartClient','AppServer','RPO'], fb:'DBAccess é o middleware. AppServer pede os dados, DBAccess traduz para SQL nativo do banco escolhido.' },
+  { q:'O usuário abre o programa Protheus no computador e vê as telas. Qual componente está sendo usado?', a:'SmartClient', wrong:['AppServer','DBAccess','RPO'], fb:'SmartClient é a interface gráfica. Toda lógica de negócio roda no AppServer — o SmartClient apenas exibe e captura eventos.' },
+  // Dicionário
+  { q:'Qual tabela do dicionário Protheus define os CAMPOS de cada tabela (tipo, tamanho, validação)?', a:'SX3', wrong:['SX2','SX9','SIX'], fb:'SX3 = dicionário de campos. X3_ARQUIVO (tabela), X3_CAMPO (nome), X3_TIPO (C/N/D), X3_TAMANHO, X3_VALID.' },
+  { q:'Qual tabela do dicionário armazena os RELACIONAMENTOS entre tabelas do Protheus?', a:'SX9', wrong:['SX2','SX3','SXD'], fb:'SX9 define como tabelas se relacionam: X9_DOMINIO (origem), X9_DTALIAS (destino), expressões de JOIN.' },
+  { q:'Um campo tipo combo no Protheus lista valores de uma tabela de domínio. Onde ficam esses valores?', a:'SX5 — Tabelas Genéricas', wrong:['SX3 — Campos','SX2 — Tabelas','SX9 — Relacionamentos'], fb:'SX5 armazena os domínios/lookups. X5_TABELA = código da lista, X5_CHAVE = valor, X5_DESCRI = descrição.' },
+  { q:'Os parâmetros MV_xxx que controlam o comportamento do Protheus ficam em qual tabela?', a:'SX6', wrong:['SX2','SX3','SM0'], fb:'SX6 = parâmetros. X6_VAR = nome (MV_LOCPAD, MV_ESTOQUE...), X6_CONTEUD = valor configurado. +10.000 parâmetros.' },
+  { q:'O que são GATILHOS em AdvPL/Protheus?', a:'Configurações que preenchem campos automaticamente quando outro campo é informado (SX7/SXD)', wrong:['Funções que disparam ao ligar o AppServer','Rotinas de backup automático','Validações de banco de dados no DBAccess'], fb:'Gatilhos (SX7/SXD) = triggers de tela. Ex: preencher B1_COD → gatilho preenche B1_DESC automaticamente.' },
+  // Nomenclatura
+  { q:'Por que a tabela de Clientes chama SA1 e a de Fornecedores chama SA2?', a:'O prefixo SA representa Arquivos Mestres de Cadastro no Protheus', wrong:['Ordem alfabética aleatória definida pela TOTVS','SA = Setor de Almoxarifado','Sigla do módulo SIGAFAT'], fb:'SA = cadastros mestres. SA1=Clientes, SA2=Fornecedores, SA3=Vendedores, SA4=Transportadoras, SA6=Bancos.' },
+  { q:'Qual prefixo de tabela identifica o módulo FINANCEIRO no Protheus?', a:'SE (SE1=Receber, SE2=Pagar, SE5=Movimentos)', wrong:['SF (Fiscal)','SD (Documentos)','SC (Compras/Vendas)'], fb:'SE = família financeira. SE1 (a receber), SE2 (a pagar), SE4 (condições pagto), SE5 (movimentos bancários).' },
+  { q:'SD1 e SD2 são tabelas de itens de notas fiscais. O que diferencia as duas?', a:'SD1 = itens de NF de ENTRADA (compras). SD2 = itens de NF de SAÍDA (vendas/faturamento)', wrong:['SD1 = NF de saída, SD2 = NF de entrada','SD1 e SD2 são a mesma coisa em filiais diferentes','SD1 = cabeçalho, SD2 = itens'], fb:'D1=entrada (ligado a SF1), D2=saída (ligado a SF2). O número após o D indica o tipo de documento.' },
+  // Campos de controle
+  { q:'Por que TODO SELECT em tabelas Protheus deve incluir WHERE D_E_L_E_T_ = " "?', a:'Porque Protheus usa soft delete — registros excluídos têm D_E_L_E_T_ = "*" mas permanecem no banco', wrong:['É um campo de auditoria, não afeta os resultados','Para melhorar a performance da query','Obrigação legal da LGPD'], fb:'Sem esse filtro, registros excluídos aparecem nos resultados. É o erro SQL mais comum em Protheus.' },
+  { q:'Em um ambiente com 3 filiais, o que acontece se você fizer SELECT em SB2 sem filtrar por B2_FILIAL?', a:'A query retorna os saldos de TODAS as filiais somados — pode inflar o resultado', wrong:['Retorna apenas a filial padrão automaticamente','Gera erro de SQL no banco','Retorna apenas os registros compartilhados'], fb:'Sem filtro de filial, você soma estoque de todas as unidades. Sempre filtre _FILIAL para análises corretas.' },
+  { q:'O que é o campo R_E_C_N_O_ presente em todas as tabelas Protheus?', a:'Número de registro físico interno — identificador único de posição na tabela, usado em navegação AdvPL', wrong:['Número de recomendação de negócios','Chave primária de negócio da tabela','Código de revisão do dicionário'], fb:'RECNO é o ponteiro físico interno. DbGoTo(nRecno) vai direto ao registro. Não é chave de negócio.' },
+  // Customização
+  { q:'O que é um Ponto de Entrada (PE) no Protheus e para que serve?', a:'Hook de customização que permite inserir código AdvPL em pontos específicos do processo padrão, sem alterar o fonte TOTVS', wrong:['Interface gráfica customizada para o cliente','Configuração de porta de conexão no AppServer','Campo extra adicionado ao dicionário SX3'], fb:'PEs permitem customizar sem alterar fontes TOTVS — o RPO padrão chama o PE se ele existir. Ex: MT010OK após salvar produto.' },
+  { q:'Por que usar ExecAuto ao invés de UPDATE SQL direto para alterar dados no Protheus?', a:'ExecAuto executa a rotina completa (gatilhos, índices, tabelas relacionadas, contabilização). UPDATE só altera aquele campo', wrong:['ExecAuto é mais rápido que SQL','O SQL Server bloqueia UPDATEs diretos em tabelas Protheus','Para atender a auditoria da TOTVS'], fb:'Rotinas Protheus atualizam múltiplas tabelas de forma consistente. UPDATE direto quebra integridade entre módulos.' },
+  { q:'Qual é a diferença entre "User Function" e "Function" em AdvPL?', a:'User Function é visível externamente (pode ser chamada de qualquer fonte). Function tem escopo local ao arquivo', wrong:['São idênticas, apenas estilos diferentes de escrita','User Function executa no cliente, Function executa no servidor','Function é mais rápida que User Function'], fb:'User Function = pública (acessível de PEs, outros fontes, ExecAuto). Function = privada ao fonte. Static Function = ainda mais restrita.' },
+  // Multiempresa
+  { q:'No Protheus, qual é a diferença entre EMPRESA e FILIAL?', a:'Empresa = grupo econômico (2 chars). Filial = unidade de negócio dentro da empresa (2 chars). Uma empresa pode ter N filiais', wrong:['São sinônimos — Protheus usa os dois termos para a mesma coisa','Empresa = matriz, Filial = departamento dentro da mesma unidade','Filial é apenas um agrupamento contábil, sem impacto operacional'], fb:'Ex: Empresa "01" = Grupo ABC. Filial "01" = São Paulo, "02" = Betim. Tabelas têm X2_MODO: C=compartilhada entre filiais, E=exclusiva por filial.' },
+  { q:'Para que serve o campo X2_MODO na tabela SX2?', a:'Define se a tabela é Compartilhada (C) entre filiais ou Exclusiva (E) por filial', wrong:['Define o módulo ao qual a tabela pertence','Controla o modo de acesso (leitura/escrita)','Define se a tabela usa D_E_L_E_T_ ou não'], fb:'X2_MODO="C" (ex: SB1-Produtos) = cadastro único para todas as filiais. X2_MODO="E" (ex: SB2-Saldos) = registro separado por filial.' },
+];
+
+function buildArchQuestion() {
+  const q = ARCH_QUESTIONS[Math.floor(Math.random()*ARCH_QUESTIONS.length)];
+  return {
+    type:'🏗️ Arquitetura', xp: 20,
+    text: q.q, context: null,
+    options: shuffle([q.a, ...q.wrong]),
+    correct: q.a,
+    feedback: q.fb, sql: ''
+  };
+}
+
+function buildConsultQuestion() {
+  const s = CONSULT_SCENARIOS[Math.floor(Math.random()*CONSULT_SCENARIOS.length)];
+  return {
+    type:'🔧 Consultoria', xp: 25,
+    text: `<strong>[${s.module}]</strong> ${s.question}`,
+    context: s.situation,
+    options: shuffle([s.correct, ...s.options.filter(o=>o!==s.correct)]),
+    correct: s.correct,
+    feedback: s.explanation,
+    sql: s.sql,
+    timerSec: 40
+  };
+}
+
+// ====================== SCREENS: FLOWS ======================
+function initFlows() {
+  const c = document.getElementById('flows-container');
+  c.innerHTML = '';
+  PROCESSES.forEach(proc => {
+    const card = document.createElement('div');
+    card.className = 'flow-process-card';
+    const stepsHtml = proc.steps.map((s,i) =>
+      `<div class="flow-step">
+        <div class="flow-step-box" title="${s.desc}">
+          <span class="fs-table">${s.table}</span>
+          <span class="fs-label">${s.label}</span>
+        </div>
+        ${i < proc.steps.length-1 ? '<div class="flow-arrow">→</div>' : ''}
+      </div>`
+    ).join('');
+    card.innerHTML = `
+      <div class="flow-header">
+        <div class="flow-icon">${proc.icon}</div>
+        <div>
+          <div class="flow-title">${proc.name}</div>
+          <div class="flow-sub">${proc.desc}</div>
+        </div>
+      </div>
+      <div class="flow-steps">${stepsHtml}</div>
+      <div style="margin-top:12px;display:flex;gap:8px;flex-wrap:wrap">
+        ${proc.steps.map(s=>`<span style="background:rgba(0,212,255,0.08);border:1px solid rgba(0,212,255,0.2);color:var(--accent);font-family:var(--mono);font-size:0.7rem;padding:2px 8px;border-radius:4px;cursor:pointer" onclick="openModalByCode('${s.table}')">${s.table}</span>`).join('')}
+      </div>`;
+    c.appendChild(card);
+  });
+}
+
+// ====================== SCREENS: ARCH REF ======================
+function initArchRef() {
+  const c = document.getElementById('arch-ref-container');
+  c.innerHTML = '';
+  const cats = [...new Set(ARCH_TOPICS.map(t=>t.category))];
+  cats.forEach(cat => {
+    const label = document.createElement('div');
+    label.style.cssText = 'font-size:0.72rem;text-transform:uppercase;letter-spacing:3px;color:var(--muted);font-family:var(--mono);margin:24px 0 12px;padding-bottom:8px;border-bottom:1px solid var(--border)';
+    label.textContent = cat;
+    c.appendChild(label);
+    ARCH_TOPICS.filter(t=>t.category===cat).forEach(t => {
+      const card = document.createElement('div');
+      card.className = 'arch-card';
+      card.innerHTML = `<div class="arch-term">${t.term}</div>
+        <div class="arch-def">${t.def}</div>
+        <div class="arch-example">📌 Exemplo: ${t.example}</div>
+        <div class="arch-example" style="margin-top:4px">💡 Por que importa: ${t.why}</div>`;
+      c.appendChild(card);
+    });
   });
 }
 
