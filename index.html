@@ -1,0 +1,1764 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>ProtheusQuiz — Domine as Tabelas</title>
+<meta name="description" content="Quiz gamificado para dominar as 100 tabelas do TOTVS Protheus. Modo Rápido, Maratona e SQL Challenge.">
+
+<!-- PWA -->
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#0A0E1A" id="meta-theme-color">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="ProtheusQuiz">
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+<link rel="icon" type="image/png" sizes="192x192" href="icons/icon-192.png">
+<link rel="icon" type="image/png" sizes="512x512" href="icons/icon-512.png">
+
+<!-- Aplica o tema salvo antes do primeiro paint, evitando flash -->
+<script>
+  (function () {
+    try {
+      var t = localStorage.getItem('pq-theme') || 'noite';
+      document.documentElement.setAttribute('data-theme', t);
+    } catch (e) {
+      document.documentElement.setAttribute('data-theme', 'noite');
+    }
+  })();
+</script>
+
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700&family=Inter:wght@400;500;600;700;900&display=swap');
+
+  :root {
+    --bg: #0A0E1A;
+    --surface: #111827;
+    --surface2: #1a2235;
+    --border: #1f2d47;
+    --accent: #00D4FF;
+    --accent2: #7C3AED;
+    --accent3: #10B981;
+    --warn: #F59E0B;
+    --danger: #EF4444;
+    --text: #E2E8F0;
+    --muted: #64748B;
+    --code-color: #94d1ff;
+    --overlay: rgba(0,0,0,0.8);
+    --mono: 'JetBrains Mono', monospace;
+    --sans: 'Inter', sans-serif;
+  }
+
+  /* ===== TEMAS ===== */
+  /* Noite (padrão) — paleta original, azul-escuro profundo */
+  html[data-theme="noite"] {
+    --bg: #0A0E1A;
+    --surface: #111827;
+    --surface2: #1a2235;
+    --border: #1f2d47;
+    --text: #E2E8F0;
+    --muted: #64748B;
+    --code-color: #94d1ff;
+    --overlay: rgba(0,0,0,0.8);
+  }
+
+  /* Preto — preto absoluto, alto contraste, ideal p/ AMOLED */
+  html[data-theme="preto"] {
+    --bg: #000000;
+    --surface: #0c0c0f;
+    --surface2: #17171c;
+    --border: #262630;
+    --text: #F5F5F7;
+    --muted: #8a8a94;
+    --code-color: #7fd4ff;
+    --overlay: rgba(0,0,0,0.9);
+  }
+
+  /* Branco — tema claro */
+  html[data-theme="branco"] {
+    --bg: #F4F6FB;
+    --surface: #FFFFFF;
+    --surface2: #F1F5F9;
+    --border: #E1E7EF;
+    --accent: #0891B2;
+    --accent2: #7C3AED;
+    --accent3: #059669;
+    --warn: #B45309;
+    --danger: #DC2626;
+    --text: #0F172A;
+    --muted: #64748B;
+    --code-color: #0369A1;
+    --overlay: rgba(15,23,42,0.55);
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: var(--sans);
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+
+  /* GRID BACKGROUND */
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background-image:
+      linear-gradient(rgba(0,212,255,0.03) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(0,212,255,0.03) 1px, transparent 1px);
+    background-size: 40px 40px;
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  .container { position: relative; z-index: 1; max-width: 860px; margin: 0 auto; padding: 24px 16px; }
+
+  /* HEADER */
+  .header {
+    display: flex; align-items: center; justify-content: space-between;
+    margin-bottom: 32px; padding-bottom: 20px;
+    border-bottom: 1px solid var(--border);
+  }
+  .logo {
+    font-family: var(--mono);
+    font-size: 1.1rem; font-weight: 700;
+    color: var(--accent);
+    letter-spacing: 2px;
+  }
+  .logo span { color: var(--muted); }
+
+  /* PLAYER STATS BAR */
+  .stats-bar {
+    display: flex; gap: 12px; flex-wrap: wrap;
+    margin-bottom: 24px;
+  }
+  .stat-chip {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 8px 14px;
+    display: flex; align-items: center; gap: 8px;
+    font-size: 0.8rem;
+  }
+  .stat-chip .label { color: var(--muted); }
+  .stat-chip .value { font-weight: 700; font-family: var(--mono); }
+  .stat-chip.xp .value { color: var(--accent); }
+  .stat-chip.streak .value { color: var(--warn); }
+  .stat-chip.level .value { color: var(--accent2); }
+  .stat-chip.correct .value { color: var(--accent3); }
+
+  /* XP BAR */
+  .xp-bar-wrap {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 12px 16px;
+    margin-bottom: 24px;
+  }
+  .xp-bar-header { display: flex; justify-content: space-between; margin-bottom: 8px; font-size: 0.78rem; }
+  .xp-bar-header .level-name { color: var(--accent2); font-weight: 700; }
+  .xp-bar-header .xp-label { color: var(--muted); font-family: var(--mono); }
+  .xp-bar-track {
+    height: 8px; background: var(--border);
+    border-radius: 4px; overflow: hidden;
+  }
+  .xp-bar-fill {
+    height: 100%;
+    background: linear-gradient(90deg, var(--accent2), var(--accent));
+    border-radius: 4px;
+    transition: width 0.6s cubic-bezier(0.4,0,0.2,1);
+  }
+
+  /* SCREEN SYSTEM */
+  .screen { display: none; }
+  .screen.active { display: block; }
+
+  /* HOME SCREEN */
+  .hero {
+    text-align: center;
+    padding: 48px 0 40px;
+  }
+  .hero-tag {
+    display: inline-block;
+    background: rgba(0,212,255,0.1);
+    border: 1px solid rgba(0,212,255,0.3);
+    color: var(--accent);
+    font-size: 0.72rem;
+    font-family: var(--mono);
+    letter-spacing: 3px;
+    padding: 4px 12px;
+    border-radius: 4px;
+    margin-bottom: 20px;
+    text-transform: uppercase;
+  }
+  .hero h1 {
+    font-size: clamp(2rem, 5vw, 3.2rem);
+    font-weight: 900;
+    line-height: 1.1;
+    margin-bottom: 16px;
+  }
+  .hero h1 .accent { color: var(--accent); }
+  .hero h1 .accent2 { color: var(--accent2); }
+  .hero p { color: var(--muted); max-width: 480px; margin: 0 auto 36px; line-height: 1.6; }
+
+  .mode-grid {
+    display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    gap: 16px; margin-bottom: 32px;
+  }
+  .mode-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 24px;
+    cursor: pointer;
+    transition: all 0.2s;
+    text-align: left;
+  }
+  .mode-card:hover {
+    border-color: var(--accent);
+    transform: translateY(-2px);
+    box-shadow: 0 8px 32px rgba(0,212,255,0.1);
+  }
+  .mode-card .mode-icon { font-size: 2rem; margin-bottom: 12px; }
+  .mode-card .mode-name { font-weight: 700; font-size: 1rem; margin-bottom: 6px; }
+  .mode-card .mode-desc { color: var(--muted); font-size: 0.82rem; line-height: 1.5; }
+  .mode-card .mode-badge {
+    display: inline-block; margin-top: 10px;
+    background: rgba(0,212,255,0.1); color: var(--accent);
+    font-size: 0.7rem; font-family: var(--mono);
+    padding: 2px 8px; border-radius: 4px;
+  }
+
+  /* TOP 100 TABLE */
+  .table-section { margin-bottom: 32px; }
+  .section-title {
+    font-family: var(--mono);
+    font-size: 0.75rem; letter-spacing: 3px;
+    color: var(--muted); text-transform: uppercase;
+    margin-bottom: 16px;
+    display: flex; align-items: center; gap: 8px;
+  }
+  .section-title::after {
+    content: ''; flex: 1; height: 1px; background: var(--border);
+  }
+
+  .module-tabs {
+    display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 16px;
+  }
+  .mod-tab {
+    padding: 5px 12px; border-radius: 6px;
+    border: 1px solid var(--border);
+    background: transparent; color: var(--muted);
+    font-size: 0.78rem; cursor: pointer;
+    font-family: var(--mono); transition: all 0.15s;
+  }
+  .mod-tab:hover, .mod-tab.active {
+    background: rgba(0,212,255,0.1);
+    border-color: var(--accent); color: var(--accent);
+  }
+
+  .table-grid {
+    display: grid; grid-template-columns: repeat(auto-fill, minmax(190px, 1fr));
+    gap: 8px;
+  }
+  .table-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 8px; padding: 12px;
+    cursor: pointer; transition: all 0.15s;
+  }
+  .table-card:hover {
+    border-color: var(--accent2);
+    background: var(--surface2);
+  }
+  .table-card .tc-code {
+    font-family: var(--mono); font-weight: 700;
+    font-size: 0.9rem; color: var(--accent);
+    margin-bottom: 4px;
+  }
+  .table-card .tc-name {
+    font-size: 0.75rem; color: var(--muted);
+    line-height: 1.3;
+  }
+  .table-card .tc-module {
+    display: inline-block; margin-top: 6px;
+    font-size: 0.65rem; font-family: var(--mono);
+    padding: 2px 6px; border-radius: 3px;
+    background: rgba(124,58,237,0.15); color: var(--accent2);
+  }
+
+  /* QUIZ SCREEN */
+  .quiz-header {
+    display: flex; justify-content: space-between; align-items: center;
+    margin-bottom: 20px;
+  }
+  .quiz-progress-wrap { flex: 1; margin: 0 16px; }
+  .quiz-progress-track {
+    height: 4px; background: var(--border); border-radius: 2px; overflow: hidden;
+  }
+  .quiz-progress-fill {
+    height: 100%;
+    background: linear-gradient(90deg, var(--accent2), var(--accent));
+    border-radius: 2px; transition: width 0.3s;
+  }
+  .q-counter { font-family: var(--mono); font-size: 0.8rem; color: var(--muted); }
+  .timer-display {
+    font-family: var(--mono); font-size: 1rem; font-weight: 700;
+    padding: 4px 12px; border-radius: 6px;
+    background: var(--surface); border: 1px solid var(--border);
+    transition: all 0.3s;
+  }
+  .timer-display.danger { color: var(--danger); border-color: var(--danger); }
+
+  .question-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 16px; padding: 28px;
+    margin-bottom: 20px;
+    position: relative; overflow: hidden;
+  }
+  .question-card::before {
+    content: '';
+    position: absolute; top: 0; left: 0; right: 0; height: 3px;
+    background: linear-gradient(90deg, var(--accent2), var(--accent));
+  }
+  .q-type-badge {
+    display: inline-block; margin-bottom: 14px;
+    font-size: 0.68rem; font-family: var(--mono); letter-spacing: 2px;
+    text-transform: uppercase; padding: 3px 10px; border-radius: 4px;
+    background: rgba(0,212,255,0.1); color: var(--accent);
+  }
+  .q-text {
+    font-size: 1.1rem; font-weight: 600; line-height: 1.5;
+    margin-bottom: 8px;
+  }
+  .q-context {
+    font-size: 0.82rem; color: var(--muted);
+    line-height: 1.5; margin-bottom: 20px;
+    padding: 12px; background: var(--bg);
+    border-radius: 8px; border-left: 3px solid var(--accent2);
+    font-family: var(--mono);
+  }
+
+  .options-grid {
+    display: grid; gap: 10px;
+  }
+  .option-btn {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 10px; padding: 14px 18px;
+    color: var(--text); cursor: pointer;
+    text-align: left; font-size: 0.9rem;
+    font-family: var(--sans);
+    transition: all 0.15s;
+    display: flex; align-items: center; gap: 12px;
+  }
+  .option-btn:hover:not(:disabled) {
+    border-color: var(--accent2);
+    background: rgba(124,58,237,0.1);
+  }
+  .option-btn .opt-key {
+    font-family: var(--mono); font-weight: 700; font-size: 0.8rem;
+    color: var(--muted); min-width: 20px;
+  }
+  .option-btn.correct {
+    border-color: var(--accent3) !important;
+    background: rgba(16,185,129,0.1) !important;
+    color: var(--accent3);
+  }
+  .option-btn.wrong {
+    border-color: var(--danger) !important;
+    background: rgba(239,68,68,0.08) !important;
+    color: var(--danger);
+  }
+  .option-btn.reveal { border-color: var(--accent3); opacity: 0.5; }
+
+  /* FEEDBACK */
+  .feedback-panel {
+    display: none;
+    background: var(--surface);
+    border-radius: 12px; padding: 20px;
+    margin-top: 16px;
+    border-left: 4px solid var(--accent3);
+  }
+  .feedback-panel.wrong { border-left-color: var(--danger); }
+  .feedback-panel.show { display: block; }
+  .feedback-title { font-weight: 700; margin-bottom: 8px; font-size: 0.95rem; }
+  .feedback-title .xp-earned { color: var(--accent); font-family: var(--mono); }
+  .feedback-body { color: var(--muted); font-size: 0.85rem; line-height: 1.6; }
+  .feedback-sql {
+    margin-top: 12px; background: var(--bg);
+    border-radius: 8px; padding: 12px;
+    font-family: var(--mono); font-size: 0.78rem;
+    color: var(--code-color); border: 1px solid var(--border);
+    overflow-x: auto; white-space: pre;
+  }
+
+  .next-btn {
+    margin-top: 16px; width: 100%;
+    background: linear-gradient(135deg, var(--accent2), var(--accent));
+    border: none; color: white;
+    padding: 14px; border-radius: 10px;
+    font-size: 0.95rem; font-weight: 700;
+    cursor: pointer; font-family: var(--sans);
+    transition: opacity 0.2s;
+    letter-spacing: 0.5px;
+  }
+  .next-btn:hover { opacity: 0.9; }
+
+  /* RESULT SCREEN */
+  .result-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 20px; padding: 40px;
+    text-align: center;
+  }
+  .result-emoji { font-size: 4rem; margin-bottom: 16px; }
+  .result-title { font-size: 1.8rem; font-weight: 900; margin-bottom: 8px; }
+  .result-sub { color: var(--muted); margin-bottom: 32px; }
+  .result-stats {
+    display: grid; grid-template-columns: repeat(3, 1fr);
+    gap: 16px; margin-bottom: 32px;
+  }
+  .rs-item {
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 12px; padding: 16px;
+  }
+  .rs-item .rs-val {
+    font-size: 1.8rem; font-weight: 900;
+    font-family: var(--mono); color: var(--accent);
+  }
+  .rs-item .rs-lab { font-size: 0.75rem; color: var(--muted); margin-top: 4px; }
+  .result-actions { display: flex; gap: 12px; justify-content: center; }
+  .btn-primary {
+    background: linear-gradient(135deg, var(--accent2), var(--accent));
+    border: none; color: white;
+    padding: 12px 28px; border-radius: 8px;
+    font-weight: 700; cursor: pointer; font-size: 0.9rem;
+  }
+  .btn-secondary {
+    background: transparent;
+    border: 1px solid var(--border); color: var(--text);
+    padding: 12px 28px; border-radius: 8px;
+    font-weight: 700; cursor: pointer; font-size: 0.9rem;
+  }
+  .btn-secondary:hover { border-color: var(--accent); color: var(--accent); }
+
+  /* DETAIL MODAL */
+  .modal-overlay {
+    display: none; position: fixed; inset: 0;
+    background: var(--overlay); z-index: 100;
+    align-items: center; justify-content: center; padding: 16px;
+  }
+  .modal-overlay.open { display: flex; }
+  .modal {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 16px; padding: 32px;
+    max-width: 600px; width: 100%;
+    max-height: 80vh; overflow-y: auto;
+    position: relative;
+  }
+  .modal-close {
+    position: absolute; top: 16px; right: 16px;
+    background: var(--surface2); border: 1px solid var(--border);
+    color: var(--muted); width: 32px; height: 32px;
+    border-radius: 6px; cursor: pointer; font-size: 1rem;
+    display: flex; align-items: center; justify-content: center;
+  }
+  .modal-code { font-family: var(--mono); font-size: 2rem; font-weight: 700; color: var(--accent); margin-bottom: 4px; }
+  .modal-name { font-size: 1.1rem; font-weight: 700; margin-bottom: 16px; }
+  .modal-section { margin-bottom: 16px; }
+  .modal-section h4 { font-size: 0.72rem; text-transform: uppercase; letter-spacing: 2px; color: var(--muted); font-family: var(--mono); margin-bottom: 8px; }
+  .modal-section p { font-size: 0.88rem; line-height: 1.6; color: var(--text); }
+  .rel-list { display: flex; flex-wrap: wrap; gap: 6px; }
+  .rel-chip {
+    background: rgba(124,58,237,0.15);
+    border: 1px solid rgba(124,58,237,0.3);
+    color: var(--accent2);
+    font-family: var(--mono); font-size: 0.75rem;
+    padding: 3px 10px; border-radius: 4px;
+    cursor: pointer;
+  }
+  .rel-chip:hover { background: rgba(124,58,237,0.3); }
+  .sql-block {
+    background: var(--bg); border: 1px solid var(--border);
+    border-radius: 8px; padding: 12px;
+    font-family: var(--mono); font-size: 0.78rem;
+    color: var(--code-color); overflow-x: auto; white-space: pre;
+    margin-top: 6px;
+  }
+
+  /* NOTIFICATION */
+  .notif {
+    position: fixed; bottom: 24px; right: 24px;
+    background: var(--surface);
+    border: 1px solid var(--accent3);
+    border-radius: 10px; padding: 12px 20px;
+    font-size: 0.85rem; font-weight: 600;
+    color: var(--accent3);
+    transform: translateX(200px); opacity: 0;
+    transition: all 0.3s; z-index: 200;
+  }
+  .notif.show { transform: translateX(0); opacity: 1; }
+  .notif.wrong-notif { border-color: var(--danger); color: var(--danger); }
+
+  /* LEVEL UP */
+  .levelup-overlay {
+    display: none; position: fixed; inset: 0;
+    background: var(--overlay); z-index: 150;
+    align-items: center; justify-content: center;
+  }
+  .levelup-overlay.show { display: flex; }
+  .levelup-box {
+    text-align: center; padding: 48px;
+    animation: pop 0.4s cubic-bezier(0.4,0,0.2,1);
+  }
+  @keyframes pop { from { transform: scale(0.5); opacity: 0; } to { transform: scale(1); opacity: 1; } }
+  .levelup-emoji { font-size: 5rem; margin-bottom: 16px; }
+  .levelup-title { font-size: 2.5rem; font-weight: 900; color: var(--accent2); margin-bottom: 8px; }
+  .levelup-sub { color: var(--muted); }
+
+  /* STREAK FIRE */
+  .streak-flame { animation: flicker 0.5s infinite alternate; display: inline-block; }
+  @keyframes flicker { from { transform: scale(1) rotate(-3deg); } to { transform: scale(1.1) rotate(3deg); } }
+
+  /* THEME SWITCHER */
+  .theme-switcher {
+    display: flex; align-items: center; gap: 4px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 999px; padding: 4px;
+  }
+  .theme-btn {
+    width: 30px; height: 30px; border-radius: 999px;
+    border: 1px solid transparent; cursor: pointer;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 0.85rem; transition: all 0.15s; position: relative;
+    background: transparent;
+  }
+  .theme-btn[data-theme-btn="noite"] { background: linear-gradient(135deg,#0A0E1A,#1a2235); }
+  .theme-btn[data-theme-btn="preto"] { background: #000000; }
+  .theme-btn[data-theme-btn="branco"] { background: #FFFFFF; }
+  .theme-btn.active { border-color: var(--accent); box-shadow: 0 0 0 2px rgba(0,212,255,0.25); }
+
+  /* INSTALL BUTTON */
+  .install-btn {
+    display: none;
+    align-items: center; gap: 6px;
+    background: linear-gradient(135deg, var(--accent2), var(--accent));
+    border: none; color: #fff; font-weight: 700;
+    font-size: 0.78rem; padding: 8px 14px; border-radius: 8px;
+    cursor: pointer; font-family: var(--sans);
+    box-shadow: 0 4px 16px rgba(0,212,255,0.25);
+  }
+  .install-btn.show { display: inline-flex; }
+  .header-actions { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+
+  /* RESPONSIVE */
+  @media (max-width: 600px) {
+    .result-stats { grid-template-columns: repeat(2, 1fr); }
+    .hero h1 { font-size: 1.8rem; }
+    .mode-grid { grid-template-columns: 1fr; }
+    .header { flex-wrap: wrap; gap: 12px; }
+  }
+</style>
+</head>
+<body>
+
+<div class="container">
+
+  <!-- HEADER -->
+  <div class="header">
+    <div class="logo">PROTHEUS<span>.QUIZ</span></div>
+    <div class="header-actions">
+      <button class="install-btn" id="install-btn">⬇ Instalar app</button>
+      <div class="theme-switcher" id="theme-switcher" role="group" aria-label="Tema">
+        <button class="theme-btn" data-theme-btn="preto" title="Preto" aria-label="Tema preto"></button>
+        <button class="theme-btn" data-theme-btn="noite" title="Noite" aria-label="Tema noite"></button>
+        <button class="theme-btn" data-theme-btn="branco" title="Branco" aria-label="Tema branco"></button>
+      </div>
+    </div>
+  </div>
+
+  <!-- STATS BAR -->
+  <div class="stats-bar">
+    <div class="stat-chip xp"><span class="label">XP</span><span class="value" id="xp-display">0</span></div>
+    <div class="stat-chip level"><span class="label">Nível</span><span class="value" id="level-display">1</span></div>
+    <div class="stat-chip streak"><span class="label">Sequência</span><span class="value"><span class="streak-flame">🔥</span><span id="streak-display">0</span></span></div>
+    <div class="stat-chip correct"><span class="label">Acertos</span><span class="value" id="correct-display">0/0</span></div>
+  </div>
+
+  <!-- XP BAR -->
+  <div class="xp-bar-wrap">
+    <div class="xp-bar-header">
+      <span class="level-name" id="level-name">🔰 Iniciante</span>
+      <span class="xp-label" id="xp-progress-label">0 / 100 XP</span>
+    </div>
+    <div class="xp-bar-track"><div class="xp-bar-fill" id="xp-bar" style="width:0%"></div></div>
+  </div>
+
+  <!-- HOME SCREEN -->
+  <div class="screen active" id="screen-home">
+    <div class="hero">
+      <div class="hero-tag">Terminal de Informação · TOTVS Protheus</div>
+      <h1>Domine as <span class="accent">100 Tabelas</span><br>do <span class="accent2">Protheus</span></h1>
+      <p>Quiz gamificado com cases reais, perguntas de relacionamento e SQL. Evolua de Iniciante a Arquiteto.</p>
+    </div>
+
+    <div class="mode-grid">
+      <div class="mode-card" onclick="startQuiz('quick')">
+        <div class="mode-icon">⚡</div>
+        <div class="mode-name">Quiz Rápido</div>
+        <div class="mode-desc">10 perguntas aleatórias. Cronômetro de 20s por questão.</div>
+        <div class="mode-badge">+10 XP/acerto</div>
+      </div>
+      <div class="mode-card" onclick="startQuiz('marathon')">
+        <div class="mode-icon">🏃</div>
+        <div class="mode-name">Maratona</div>
+        <div class="mode-desc">25 perguntas. Mistura de tipos: identificação, relacionamento, casos de uso e cenários reais com SQL.</div>
+        <div class="mode-badge">+15 XP/acerto</div>
+      </div>
+      <div class="mode-card" onclick="startQuiz('sql')">
+        <div class="mode-icon">🗄️</div>
+        <div class="mode-name">SQL Challenge</div>
+        <div class="mode-desc">Apenas perguntas de SQL e relacionamento entre tabelas.</div>
+        <div class="mode-badge">+20 XP/acerto</div>
+      </div>
+      <div class="mode-card" onclick="showScreen('screen-catalog')">
+        <div class="mode-icon">📚</div>
+        <div class="mode-name">Catálogo</div>
+        <div class="mode-desc">Explore todas as 100 tabelas com campos, relacionamentos e SQL de exemplo.</div>
+        <div class="mode-badge">Referência</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- CATALOG SCREEN -->
+  <div class="screen" id="screen-catalog">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px">
+      <h2 style="font-size:1.2rem;font-weight:700">📚 Top 100 Tabelas</h2>
+      <button onclick="showScreen('screen-home')" style="background:var(--surface);border:1px solid var(--border);color:var(--muted);padding:6px 14px;border-radius:6px;cursor:pointer;font-size:0.82rem">← Voltar</button>
+    </div>
+    <div class="module-tabs" id="module-tabs"></div>
+    <div class="table-grid" id="catalog-grid"></div>
+  </div>
+
+  <!-- QUIZ SCREEN -->
+  <div class="screen" id="screen-quiz">
+    <div class="quiz-header">
+      <button onclick="showScreen('screen-home')" style="background:var(--surface);border:1px solid var(--border);color:var(--muted);padding:6px 12px;border-radius:6px;cursor:pointer;font-size:0.8rem">← Sair</button>
+      <div class="quiz-progress-wrap">
+        <div class="quiz-progress-track">
+          <div class="quiz-progress-fill" id="quiz-progress"></div>
+        </div>
+      </div>
+      <div style="display:flex;align-items:center;gap:10px">
+        <div class="q-counter" id="q-counter">1/10</div>
+        <div class="timer-display" id="timer">20s</div>
+      </div>
+    </div>
+
+    <div class="question-card">
+      <div class="q-type-badge" id="q-type-badge">Identificação</div>
+      <div class="q-text" id="q-text">Pergunta</div>
+      <div class="q-context" id="q-context" style="display:none"></div>
+      <div class="options-grid" id="options-grid"></div>
+    </div>
+
+    <div class="feedback-panel" id="feedback-panel">
+      <div class="feedback-title" id="feedback-title"></div>
+      <div class="feedback-body" id="feedback-body"></div>
+      <div class="feedback-sql" id="feedback-sql" style="display:none"></div>
+    </div>
+
+    <button class="next-btn" id="next-btn" onclick="nextQuestion()" style="display:none">Próxima →</button>
+  </div>
+
+  <!-- RESULT SCREEN -->
+  <div class="screen" id="screen-result">
+    <div class="result-card">
+      <div class="result-emoji" id="result-emoji">🎯</div>
+      <div class="result-title" id="result-title">Quiz Completo!</div>
+      <div class="result-sub" id="result-sub"></div>
+      <div class="result-stats">
+        <div class="rs-item"><div class="rs-val" id="r-correct">0</div><div class="rs-lab">Acertos</div></div>
+        <div class="rs-item"><div class="rs-val" id="r-xp" style="color:var(--accent2)">0</div><div class="rs-lab">XP Ganho</div></div>
+        <div class="rs-item"><div class="rs-val" id="r-streak" style="color:var(--warn)">0</div><div class="rs-lab">Sequência Máx</div></div>
+      </div>
+      <div class="result-actions">
+        <button class="btn-primary" onclick="restartQuiz()">Jogar Novamente</button>
+        <button class="btn-secondary" onclick="showScreen('screen-home')">Menu</button>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<!-- TABLE DETAIL MODAL -->
+<div class="modal-overlay" id="modal-overlay" onclick="closeModal(event)">
+  <div class="modal" id="modal-content">
+    <button class="modal-close" onclick="closeModalBtn()">✕</button>
+    <div class="modal-code" id="m-code"></div>
+    <div class="modal-name" id="m-name"></div>
+    <div class="modal-section">
+      <h4>Módulo</h4>
+      <p id="m-module"></p>
+    </div>
+    <div class="modal-section">
+      <h4>Descrição</h4>
+      <p id="m-desc"></p>
+    </div>
+    <div class="modal-section">
+      <h4>Principais Campos</h4>
+      <p id="m-fields" style="font-family:var(--mono);font-size:0.82rem;color:var(--code-color)"></p>
+    </div>
+    <div class="modal-section">
+      <h4>Relacionamentos</h4>
+      <div class="rel-list" id="m-rels"></div>
+    </div>
+    <div class="modal-section">
+      <h4>SQL de Exemplo</h4>
+      <div class="sql-block" id="m-sql"></div>
+    </div>
+  </div>
+</div>
+
+<!-- NOTIFICATION -->
+<div class="notif" id="notif"></div>
+
+<!-- LEVEL UP -->
+<div class="levelup-overlay" id="levelup-overlay" onclick="this.classList.remove('show')">
+  <div class="levelup-box">
+    <div class="levelup-emoji">🚀</div>
+    <div class="levelup-title" id="levelup-title">NÍVEL UP!</div>
+    <div class="levelup-sub" id="levelup-sub">Você alcançou um novo nível</div>
+    <div style="margin-top:16px;color:var(--muted);font-size:0.82rem">Toque para continuar</div>
+  </div>
+</div>
+
+<script>
+// ====================== DATABASE ======================
+const TABLES = [
+  // ESTOQUE E PRODUTOS
+  { code:'SB1', name:'Cadastro de Produtos', module:'Estoque', desc:'Tabela mestre de produtos. Contém código, descrição, unidade, tipo e dados gerais do produto.', fields:'B1_COD, B1_DESC, B1_UM, B1_TIPO, B1_GRUPO, B1_LOCPAD, B1_PROC', rels:['SB2','SBK','SB5','SC1','SD1','SD2'], sql:`SELECT B1_COD, B1_DESC, B1_UM, B1_TIPO
+FROM SB1010
+WHERE B1_FILIAL = '01'
+  AND D_E_L_E_T_ = ' '
+ORDER BY B1_DESC` },
+
+  { code:'SB2', name:'Saldos de Estoque', module:'Estoque', desc:'Saldos de estoque por produto e armazém. Contém quantidade em estoque, empenho, pedido e saldo atual.', fields:'B2_COD, B2_LOCAL, B2_QATU, B2_SALPEDVEN, B2_RESERVA, B2_EMPENHO', rels:['SB1','SBK','SD3'], sql:`SELECT B2_COD, B2_LOCAL, B2_QATU, B2_RESERVA
+FROM SB2010
+WHERE B2_FILIAL = '01'
+  AND B2_QATU > 0
+  AND D_E_L_E_T_ = ' '` },
+
+  { code:'SBK', name:'Localização de Estoque', module:'Estoque', desc:'Controle de localização física do estoque (endereçamento). Liga produto ao local físico no armazém.', fields:'BK_CODPRO, BK_LOCAL, BK_LOTECTL, BK_QTDATU', rels:['SB1','SB2'], sql:`SELECT BK_CODPRO, BK_LOCAL, BK_QTDATU
+FROM SBK010
+WHERE BK_FILIAL = '01'
+  AND D_E_L_E_T_ = ' '` },
+
+  { code:'SD3', name:'Movimentos Internos', module:'Estoque', desc:'Movimentações internas de estoque: transferências, ajustes, baixas por produção.', fields:'D3_COD, D3_LOCAL, D3_TM, D3_QUANT, D3_EMISSAO, D3_CUSTO', rels:['SB1','SB2','SFC'], sql:`SELECT D3_COD, D3_TM, D3_QUANT, D3_EMISSAO
+FROM SD3010
+WHERE D3_FILIAL = '01'
+  AND D3_EMISSAO >= '20240101'
+  AND D_E_L_E_T_ = ' '` },
+
+  { code:'SB5', name:'Complemento de Produtos', module:'Estoque', desc:'Informações complementares do produto: peso, dimensões, dados fiscais, NCM.', fields:'B5_COD, B5_PESO, B5_ALTURA, B5_LARGURA, B5_NCM', rels:['SB1'], sql:`SELECT B1_COD, B1_DESC, B5_NCM, B5_PESO
+FROM SB1010 B1
+INNER JOIN SB5010 B5 ON B5_COD = B1_COD
+  AND B5_FILIAL = B1_FILIAL AND B5.D_E_L_E_T_ = ' '
+WHERE B1_FILIAL = '01' AND B1.D_E_L_E_T_ = ' '` },
+
+  { code:'SBF', name:'Grupos de Estoque', module:'Estoque', desc:'Cadastro de grupos de produtos para classificação e relatórios de estoque.', fields:'BF_GRUPO, BF_DESC', rels:['SB1'], sql:`SELECT BF_GRUPO, BF_DESC FROM SBF010
+WHERE BF_FILIAL = '01' AND D_E_L_E_T_ = ' '` },
+
+  { code:'SB8', name:'Lotes de Produto', module:'Estoque', desc:'Controle de lotes de produtos. Rastreabilidade por lote de fabricação.', fields:'B8_COD, B8_LOTECTL, B8_DTFAB, B8_DTVENC', rels:['SB1','SB2'], sql:`SELECT B8_COD, B8_LOTECTL, B8_DTFAB, B8_DTVENC
+FROM SB8010 WHERE B8_FILIAL='01' AND D_E_L_E_T_=' '` },
+
+  // SD1, SD2, SFT, SB9 definidos acima com detalhamento completo
+
+  // COMPRAS
+  { code:'SC1', name:'Solicitações de Compra', module:'Compras', desc:'Solicitações internas de compra de materiais. Origem do processo de compras.', fields:'C1_NUM, C1_ITEM, C1_PRODUTO, C1_QUANT, C1_DATPRF, C1_SOLICIT', rels:['SB1','SC7','SA2'], sql:`SELECT C1_NUM, C1_PRODUTO, C1_QUANT, C1_DATPRF
+FROM SC1010
+WHERE C1_FILIAL = '01'
+  AND C1_DATPRF >= CONVERT(VARCHAR,GETDATE(),112)
+  AND D_E_L_E_T_ = ' '` },
+
+  { code:'SC7', name:'Pedidos de Compra', module:'Compras', desc:'Pedidos de compra emitidos para fornecedores. Central do módulo de compras.', fields:'C7_NUM, C7_ITEM, C7_PRODUTO, C7_QUANT, C7_VALOR, C7_FORNECE, C7_EMISSAO', rels:['SC1','SA2','SF1','SB1'], sql:`SELECT C7_NUM, C7_PRODUTO, C7_QUANT, C7_VALOR,
+       C7_FORNECE, C7_EMISSAO
+FROM SC7010
+WHERE C7_FILIAL = '01'
+  AND C7_EMISSAO >= '20240101'
+  AND D_E_L_E_T_ = ' '` },
+
+  { code:'SA2', name:'Cadastro de Fornecedores', module:'Compras', desc:'Cadastro de fornecedores. Contém CNPJ, endereço, condição de pagamento e dados bancários.', fields:'A2_COD, A2_LOJA, A2_NOME, A2_CGC, A2_COND, A2_TIPO', rels:['SC7','SE2','SF1'], sql:`SELECT A2_COD, A2_LOJA, A2_NOME, A2_CGC
+FROM SA2010
+WHERE A2_FILIAL = '01'
+  AND A2_MSBLQL <> '1'
+  AND D_E_L_E_T_ = ' '
+ORDER BY A2_NOME` },
+
+  { code:'SC5', name:'Cabeçalho Pedido de Venda', module:'Vendas', desc:'Cabeçalho dos pedidos de venda. Contém cliente, condição de pagamento, frete e totais.', fields:'C5_NUM, C5_CLIENTE, C5_LOJACLI, C5_EMISSAO, C5_CONDPAG, C5_FRETE', rels:['SC6','SA1','SE1'], sql:`SELECT C5_NUM, C5_CLIENTE, C5_EMISSAO, C5_VLTOTAL
+FROM SC5010
+WHERE C5_FILIAL = '01'
+  AND C5_EMISSAO >= '20240101'
+  AND D_E_L_E_T_ = ' '` },
+
+  { code:'SC6', name:'Itens do Pedido de Venda', module:'Vendas', desc:'Itens dos pedidos de venda. Liga pedido ao produto com quantidade e preço.', fields:'C6_NUM, C6_ITEM, C6_PRODUTO, C6_QTDVEN, C6_PRCVEN, C6_ENTREG', rels:['SC5','SB1','SD2'], sql:`SELECT C6_NUM, C6_PRODUTO, C6_QTDVEN, C6_PRCVEN
+FROM SC6010 C6
+INNER JOIN SC5010 C5 ON C5_NUM = C6_NUM AND C5_FILIAL = C6_FILIAL
+WHERE C6_FILIAL = '01' AND C6.D_E_L_E_T_ = ' '` },
+
+  // FISCAL
+  { code:'SF1', name:'Cabeçalho Documento Entrada', module:'Fiscal', desc:'Cabeçalho das notas fiscais de entrada. Central do módulo de compras/fiscal.', fields:'F1_DOC, F1_SERIE, F1_FORNECE, F1_LOJA, F1_EMISSAO, F1_VALBRUT', rels:['SD1','SA2','SF4'], sql:`SELECT F1_DOC, F1_SERIE, F1_FORNECE, F1_EMISSAO, F1_VALBRUT
+FROM SF1010
+WHERE F1_FILIAL = '01'
+  AND F1_EMISSAO >= '20240101'
+  AND D_E_L_E_T_ = ' '
+ORDER BY F1_EMISSAO DESC` },
+
+  // (SD1, SD2, SFT, SB9 — definidos acima com detalhamento completo)
+
+  { code:'SF2', name:'Cabeçalho Documento Saída', module:'Fiscal', desc:'Cabeçalho das notas fiscais de saída (vendas). Contém cliente, série, chave NFe.', fields:'F2_DOC, F2_SERIE, F2_CLIENTE, F2_EMISSAO, F2_VALBRUT, F2_CHVNFE', rels:['SD2','SA1','SF4'], sql:`SELECT F2_DOC, F2_SERIE, F2_CLIENTE, F2_EMISSAO, F2_VALBRUT
+FROM SF2010
+WHERE F2_FILIAL = '01'
+  AND F2_EMISSAO >= '20240101'
+  AND D_E_L_E_T_ = ' '` },
+
+  { code:'SD2', name:'Itens Documento Saída', module:'Fiscal', desc:'Itens das notas fiscais de saída. É a tabela mais importante para análise de faturamento: produtos vendidos, quantidades, preços, TES e impostos por item. Essencial para dashboards de vendas por produto.', fields:'D2_DOC, D2_SERIE, D2_ITEM, D2_COD, D2_QUANT, D2_PRCVEN, D2_TOTAL, D2_TES, D2_CF, D2_CLIENTE, D2_LOJA, D2_EMISSAO', rels:['SF2','SB1','SA1','SA3','SF4'], sql:`-- Faturamento por produto no mês
+SELECT D2_COD, B1_DESC,
+  SUM(D2_QUANT) AS QTD_FATURADA,
+  SUM(D2_TOTAL) AS VALOR_TOTAL
+FROM SD2010 D2
+INNER JOIN SF2010 F2 ON F2_DOC=D2_DOC AND F2_SERIE=D2_SERIE
+  AND F2_FILIAL=D2_FILIAL AND F2.D_E_L_E_T_=' '
+INNER JOIN SB1010 B1 ON B1_COD=D2_COD
+  AND B1_FILIAL=D2_FILIAL AND B1.D_E_L_E_T_=' '
+WHERE D2_FILIAL='01'
+  AND D2_EMISSAO >= '20240101'
+  AND D2.D_E_L_E_T_=' '
+GROUP BY D2_COD, B1_DESC
+ORDER BY VALOR_TOTAL DESC` },
+
+  { code:'SD1', name:'Itens Documento Entrada', module:'Fiscal', desc:'Itens das notas fiscais de entrada (compras). Contém produto, quantidade recebida, valor unitário, TES e dados fiscais. Indispensável para análise de compras por produto, custo médio e conferência de recebimento.', fields:'D1_DOC, D1_SERIE, D1_ITEM, D1_COD, D1_QUANT, D1_VUNIT, D1_TOTAL, D1_TES, D1_CF, D1_FORNECE, D1_LOJA, D1_EMISSAO', rels:['SF1','SB1','SA2','SF4','SC7'], sql:`-- Compras por fornecedor e produto
+SELECT D1_FORNECE, A2_NOME, D1_COD, B1_DESC,
+  SUM(D1_QUANT) AS QTD_COMPRADA,
+  SUM(D1_TOTAL) AS VALOR_COMPRADO
+FROM SD1010 D1
+INNER JOIN SF1010 F1 ON F1_DOC=D1_DOC AND F1_SERIE=D1_SERIE
+  AND F1_FILIAL=D1_FILIAL AND F1.D_E_L_E_T_=' '
+INNER JOIN SA2010 A2 ON A2_COD=D1_FORNECE AND A2_LOJA=D1_LOJA
+  AND A2_FILIAL=D1_FILIAL AND A2.D_E_L_E_T_=' '
+INNER JOIN SB1010 B1 ON B1_COD=D1_COD
+  AND B1_FILIAL=D1_FILIAL AND B1.D_E_L_E_T_=' '
+WHERE D1_FILIAL='01'
+  AND D1_EMISSAO >= '20240101'
+  AND D1.D_E_L_E_T_=' '
+GROUP BY D1_FORNECE, A2_NOME, D1_COD, B1_DESC
+ORDER BY VALOR_COMPRADO DESC` },
+
+  { code:'SFT', name:'Tributação por Produto/UF', module:'Fiscal', desc:'Tabela de tributação fiscal por produto e estado de destino. Define alíquotas de ICMS, IPI, PIS, COFINS e substituição tributária por combinação produto × UF. Essencial para emissão correta de NF-e e cálculo de impostos.', fields:'FT_ESTADO, FT_PRODUTO, FT_ALIQ, FT_ALIQISS, FT_IPIALIQ, FT_PISALIQ, FT_COFALIQ, FT_TRIB, FT_ICMSST', rels:['SB1','SF1','SF2','SF4'], sql:`-- Tributação de um produto por estado
+SELECT FT_ESTADO, FT_PRODUTO, B1_DESC,
+  FT_ALIQ AS ICMS_ALIQ,
+  FT_IPIALIQ AS IPI_ALIQ,
+  FT_PISALIQ AS PIS_ALIQ,
+  FT_COFALIQ AS COFINS_ALIQ
+FROM SFT010 FT
+INNER JOIN SB1010 B1 ON B1_COD=FT_PRODUTO
+  AND B1_FILIAL=FT_FILIAL AND B1.D_E_L_E_T_=' '
+WHERE FT_FILIAL='01'
+  AND FT_PRODUTO='PROD001'
+  AND FT.D_E_L_E_T_=' '
+ORDER BY FT_ESTADO` },
+
+  { code:'SB9', name:'Custos de Produtos (Médio/Reposição)', module:'Estoque', desc:'Custos médios e de reposição dos produtos por armazém. Campos CM1 a CM5 representam custo em cada moeda. Fundamental para: valorização de estoque, cálculo de CMV, margem de contribuição e análise de rentabilidade por produto.', fields:'B9_COD, B9_LOCAL, B9_CM1, B9_CM2, B9_CM3, B9_CUSTD, B9_CUSTO1, B9_CUSTO2', rels:['SB1','SB2','SD2','SD3'], sql:`-- Valorização do estoque com custo médio
+SELECT B2_COD, B1_DESC, B2_LOCAL,
+  B2_QATU AS ESTOQUE_ATUAL,
+  B9_CM1 AS CUSTO_MEDIO,
+  (B2_QATU * B9_CM1) AS VALOR_ESTOQUE
+FROM SB2010 B2
+INNER JOIN SB1010 B1 ON B1_COD=B2_COD
+  AND B1_FILIAL=B2_FILIAL AND B1.D_E_L_E_T_=' '
+INNER JOIN SB9010 B9 ON B9_COD=B2_COD AND B9_LOCAL=B2_LOCAL
+  AND B9_FILIAL=B2_FILIAL AND B9.D_E_L_E_T_=' '
+WHERE B2_FILIAL='01'
+  AND B2_QATU > 0
+  AND B2.D_E_L_E_T_=' '
+ORDER BY VALOR_ESTOQUE DESC` },
+
+  { code:'SF4', name:'Tipos de Entrada e Saída (TES)', module:'Fiscal', desc:'Configuração dos Tipos de Entrada e Saída. Define comportamento fiscal e contábil de cada operação.', fields:'F4_CODIGO, F4_DESCRI, F4_ESTOQUE, F4_CF, F4_DUPLIC', rels:['SD1','SD2','SF1','SF2'], sql:`SELECT F4_CODIGO, F4_DESCRI, F4_ESTOQUE, F4_CF
+FROM SF4010
+WHERE F4_FILIAL = '01' AND D_E_L_E_T_ = ' '` },
+
+  // FINANCEIRO
+  { code:'SE1', name:'Contas a Receber', module:'Financeiro', desc:'Títulos a receber. Contém cliente, vencimento, valor, banco e status de baixa.', fields:'E1_NUM, E1_PARCELA, E1_CLIENTE, E1_LOJA, E1_VENCREA, E1_VALOR, E1_SALDO, E1_BAIXA', rels:['SA1','SE5','SEA'], sql:`SELECT E1_NUM, E1_CLIENTE, E1_VENCREA, E1_VALOR, E1_SALDO
+FROM SE1010
+WHERE E1_FILIAL = '01'
+  AND E1_SALDO > 0
+  AND E1_BAIXA = ' '
+  AND D_E_L_E_T_ = ' '
+ORDER BY E1_VENCREA` },
+
+  { code:'SE2', name:'Contas a Pagar', module:'Financeiro', desc:'Títulos a pagar para fornecedores. Controla vencimentos, valores e pagamentos.', fields:'E2_NUM, E2_PARCELA, E2_FORNECE, E2_LOJA, E2_VENCREA, E2_VALOR, E2_SALDO', rels:['SA2','SE5','SEA'], sql:`SELECT E2_NUM, E2_FORNECE, E2_VENCREA, E2_VALOR, E2_SALDO
+FROM SE2010
+WHERE E2_FILIAL = '01'
+  AND E2_SALDO > 0
+  AND E2_BAIXA = ' '
+  AND D_E_L_E_T_ = ' '
+ORDER BY E2_VENCREA` },
+
+  { code:'SE5', name:'Movimentos Bancários', module:'Financeiro', desc:'Movimentos de baixa de títulos e lançamentos bancários. Registra pagamentos e recebimentos.', fields:'E5_BANCO, E5_AGENCIA, E5_CONTA, E5_DATA, E5_VALOR, E5_TIPO', rels:['SE1','SE2','SA6'], sql:`SELECT E5_DATA, E5_BANCO, E5_VALOR, E5_TIPO
+FROM SE5010
+WHERE E5_FILIAL = '01'
+  AND E5_DATA >= '20240101'
+  AND D_E_L_E_T_ = ' '` },
+
+  { code:'SA6', name:'Bancos', module:'Financeiro', desc:'Cadastro de bancos e contas bancárias. Base para movimentação financeira.', fields:'A6_COD, A6_AGENCIA, A6_NUMCON, A6_NOME', rels:['SE5','SEA'], sql:`SELECT A6_COD, A6_NOME, A6_AGENCIA, A6_NUMCON
+FROM SA6010 WHERE A6_FILIAL='01' AND D_E_L_E_T_=' '` },
+
+  { code:'SEA', name:'Borderôs', module:'Financeiro', desc:'Controle de borderôs (remessas bancárias). Agrupa títulos para cobrança ou pagamento em lote.', fields:'EA_NUMBOR, EA_TIPO, EA_BANCO, EA_DATA, EA_VALOR', rels:['SE1','SE2','SA6'], sql:`SELECT EA_NUMBOR, EA_TIPO, EA_BANCO, EA_DATA, EA_VALOR
+FROM SEA010 WHERE EA_FILIAL='01' AND D_E_L_E_T_=' '` },
+
+  // CONTABILIDADE
+  { code:'CT1', name:'Lançamentos Contábeis', module:'Contabilidade', desc:'Lançamentos do plano de contas. Base para todo o módulo contábil.', fields:'CT1_LOTE, CT1_ORDEM, CT1_CONTA, CT1_DEBITO, CT1_CREDITO, CT1_DATA', rels:['CT2','CTT'], sql:`SELECT CT1_LOTE, CT1_CONTA, CT1_DEBITO, CT1_CREDITO, CT1_DATA
+FROM CT1010
+WHERE CT1_FILIAL = '01'
+  AND CT1_DATA >= '20240101'
+  AND D_E_L_E_T_ = ' '` },
+
+  { code:'CTT', name:'Plano de Contas', module:'Contabilidade', desc:'Plano de contas contábil. Estrutura hierárquica de contas para contabilização.', fields:'CTT_CONTA, CTT_DESC01, CTT_TIPO, CTT_CLASSE, CTT_NORMAL', rels:['CT1','CT2'], sql:`SELECT CTT_CONTA, CTT_DESC01, CTT_TIPO, CTT_CLASSE
+FROM CTT010
+WHERE CTT_FILIAL = '01' AND D_E_L_E_T_ = ' '
+ORDER BY CTT_CONTA` },
+
+  { code:'CT2', name:'Lotes Contábeis', module:'Contabilidade', desc:'Cabeçalho dos lotes de lançamentos contábeis. Agrupa lançamentos por lote.', fields:'CT2_LOTE, CT2_DATA, CT2_HIST, CT2_USUARIO', rels:['CT1'], sql:`SELECT CT2_LOTE, CT2_DATA, CT2_HIST
+FROM CT2010 WHERE CT2_FILIAL='01' AND D_E_L_E_T_=' '` },
+
+  // VENDAS
+  { code:'SA1', name:'Cadastro de Clientes', module:'Vendas', desc:'Cadastro de clientes. Contém CNPJ, endereço, condição de pagamento e limite de crédito.', fields:'A1_COD, A1_LOJA, A1_NOME, A1_CGC, A1_COND, A1_LC', rels:['SC5','SE1','SF2'], sql:`SELECT A1_COD, A1_LOJA, A1_NOME, A1_CGC, A1_LC
+FROM SA1010
+WHERE A1_FILIAL = '01'
+  AND A1_MSBLQL <> '1'
+  AND D_E_L_E_T_ = ' '
+ORDER BY A1_NOME` },
+
+  { code:'SA3', name:'Cadastro de Vendedores', module:'Vendas', desc:'Cadastro de vendedores com comissão, tipo e limites.', fields:'A3_COD, A3_NOME, A3_COMIS, A3_TIPO', rels:['SC5','SF2'], sql:`SELECT A3_COD, A3_NOME, A3_COMIS
+FROM SA3010 WHERE A3_FILIAL='01' AND D_E_L_E_T_=' '` },
+
+  // MANUFATURA / PRODUÇÃO
+  { code:'SFC', name:'Ordens de Produção', module:'PCP', desc:'Cabeçalho das ordens de produção. Central do módulo de manufatura.', fields:'C2_NUM, C2_ITEM, C2_PRODUTO, C2_QUANT, C2_EMISSAO, C2_DATPRF, C2_LOCAL', rels:['SFD','SD3','SB1'], sql:`SELECT C2_NUM, C2_PRODUTO, C2_QUANT, C2_EMISSAO, C2_DATPRF
+FROM SFC010
+WHERE C2_FILIAL = '01'
+  AND C2_EMISSAO >= '20240101'
+  AND D_E_L_E_T_ = ' '` },
+
+  { code:'SFD', name:'Itens da Ordem de Produção', module:'PCP', desc:'Componentes/itens das ordens de produção. Lista de materiais consumidos.', fields:'C3_ORDEM, C3_ITEM, C3_COMP, C3_QUANT, C3_TRT', rels:['SFC','SB1'], sql:`SELECT C3_ORDEM, C3_COMP, C3_QUANT
+FROM SFD010 WHERE C3_FILIAL='01' AND D_E_L_E_T_=' '` },
+
+  { code:'SG1', name:'Estrutura de Produto (Pai-Filho)', module:'PCP', desc:'Estrutura de produtos (BOM – Bill of Materials). Define a hierarquia pai-filho dos componentes.', fields:'G1_COD, G1_COMP, G1_QUANT, G1_INI, G1_FIM', rels:['SB1','SFD'], sql:`SELECT G1_COD, G1_COMP, G1_QUANT
+FROM SG1010
+WHERE G1_FILIAL = '01'
+  AND G1_COD = 'PRODUTO_PAI'
+  AND D_E_L_E_T_ = ' '` },
+
+  { code:'SG2', name:'Operações de Roteiro', module:'PCP', desc:'Roteiro de operações do processo produtivo. Define sequência de operações para fabricação.', fields:'G2_COD, G2_OPERAC, G2_DESCRI, G2_TEMRUN', rels:['SG1','SFC'], sql:`SELECT G2_COD, G2_OPERAC, G2_DESCRI, G2_TEMRUN
+FROM SG2010 WHERE G2_FILIAL='01' AND D_E_L_E_T_=' '` },
+
+  // DICIONÁRIO / SISTEMA
+  { code:'SX2', name:'Tabelas do Sistema', module:'Dicionário', desc:'Dicionário de tabelas do Protheus. Contém código, nome e rotina de cada tabela.', fields:'X2_CHAVE, X2_NOME, X2_ROTINA, X2_MODULO', rels:['SX3','SX9','SIX'], sql:`SELECT X2_CHAVE, X2_NOME, X2_MODULO
+FROM SX2010
+WHERE D_E_L_E_T_ = ' '
+ORDER BY X2_CHAVE` },
+
+  { code:'SX3', name:'Campos do Dicionário', module:'Dicionário', desc:'Campos de cada tabela do Protheus. Define tamanho, tipo, validação e label dos campos.', fields:'X3_ARQUIVO, X3_CAMPO, X3_TIPO, X3_TAMANHO, X3_TITULO, X3_VALID', rels:['SX2','SXG'], sql:`SELECT X3_ARQUIVO, X3_CAMPO, X3_TIPO, X3_TAMANHO, X3_TITULO
+FROM SX3010
+WHERE X3_ARQUIVO = 'SB1'
+  AND D_E_L_E_T_ = ' '
+ORDER BY X3_ORDEM` },
+
+  { code:'SX5', name:'Tabelas Genéricas', module:'Dicionário', desc:'Tabelas de domínio/lookup genéricas do Protheus. Contém listas de valores para combos.', fields:'X5_TABELA, X5_CHAVE, X5_DESCRI', rels:['SX2'], sql:`SELECT X5_TABELA, X5_CHAVE, X5_DESCRI
+FROM SX5010
+WHERE X5_TABELA = '01'
+  AND D_E_L_E_T_ = ' '` },
+
+  { code:'SX9', name:'Relacionamentos', module:'Dicionário', desc:'Relacionamentos entre tabelas do Protheus. Define chaves de ligação entre entidades.', fields:'X9_DOMINIO, X9_DTALIAS, X9_EXPDOM, X9_EXPIMA', rels:['SX2'], sql:`SELECT X9_DOMINIO, X9_DTALIAS, X9_EXPDOM
+FROM SX9010
+WHERE X9_DOMINIO = 'SB1'
+  AND D_E_L_E_T_ = ' '` },
+
+  { code:'SIX', name:'Índices das Tabelas', module:'Dicionário', desc:'Índices de cada tabela. Define as chaves de busca e ordenação das tabelas do Protheus.', fields:'INDICE, ORDEM, CHAVE, DESCRI', rels:['SX2'], sql:`SELECT INDICE, ORDEM, CHAVE, DESCRI
+FROM SIX010
+WHERE INDICE = 'SB1' AND D_E_L_E_T_ = ' '` },
+
+  { code:'SXG', name:'Grupos de Campos', module:'Dicionário', desc:'Grupos de campos do dicionário. Agrupa campos para layout de telas.', fields:'XG_GRUPO, XG_DESCRI', rels:['SX3'], sql:`SELECT XG_GRUPO, XG_DESCRI FROM SXG010
+WHERE D_E_L_E_T_ = ' '` },
+
+  // RH
+  { code:'SRA', name:'Funcionários', module:'RH', desc:'Cadastro de funcionários. Base do módulo de RH com dados pessoais, cargo e salário.', fields:'RA_MAT, RA_NOME, RA_CARGO, RA_SALARIO, RA_ADMISSA, RA_CC', rels:['SRB','SRC','SRD'], sql:`SELECT RA_MAT, RA_NOME, RA_CARGO, RA_SALARIO
+FROM SRA010
+WHERE RA_FILIAL = '01'
+  AND RA_DEMISSA = ' '
+  AND D_E_L_E_T_ = ' '
+ORDER BY RA_NOME` },
+
+  { code:'SRB', name:'Cargos e Funções', module:'RH', desc:'Cadastro de cargos e funções. Define estrutura hierárquica e faixa salarial.', fields:'RB_CARGO, RB_DESC, RB_CATSOC, RB_SALMIN, RB_SALMAX', rels:['SRA'], sql:`SELECT RB_CARGO, RB_DESC, RB_SALMIN, RB_SALMAX
+FROM SRB010 WHERE RB_FILIAL='01' AND D_E_L_E_T_=' '` },
+
+  { code:'SRC', name:'Centros de Custo RH', module:'RH', desc:'Centros de custo para rateio da folha de pagamento.', fields:'RC_CC, RC_DESCRI, RC_RATEIO', rels:['SRA','CTT'], sql:`SELECT RC_CC, RC_DESCRI FROM SRC010
+WHERE RC_FILIAL='01' AND D_E_L_E_T_=' '` },
+
+  { code:'SRD', name:'Verbas de Funcionários', module:'RH', desc:'Verbas da folha de pagamento: salários, horas extras, descontos, benefícios.', fields:'RD_MAT, RD_TVERBA, RD_VERBA, RD_VALOR', rels:['SRA'], sql:`SELECT RD_MAT, RD_VERBA, RD_VALOR
+FROM SRD010 WHERE RD_FILIAL='01' AND D_E_L_E_T_=' '` },
+
+  // PATRIMÔNIO
+  { code:'SN1', name:'Ativos Fixos', module:'Patrimônio', desc:'Cadastro de bens do ativo imobilizado. Controla depreciação, valor e localização.', fields:'N1_CODIGO, N1_DESCRI, N1_DTAAQ, N1_VALAQ, N1_TXDEP, N1_CONTA', rels:['SN2','CTT'], sql:`SELECT N1_CODIGO, N1_DESCRI, N1_VALAQ, N1_TXDEP
+FROM SN1010
+WHERE N1_FILIAL = '01' AND D_E_L_E_T_ = ' '` },
+
+  { code:'SN2', name:'Depreciações', module:'Patrimônio', desc:'Movimentações de depreciação dos ativos fixos.', fields:'N2_CODIGO, N2_DATA, N2_VALDEP, N2_VALRSD', rels:['SN1'], sql:`SELECT N2_CODIGO, N2_DATA, N2_VALDEP
+FROM SN2010 WHERE N2_FILIAL='01' AND D_E_L_E_T_=' '` },
+
+  // SISTEMA
+  { code:'SM0', name:'Empresas e Filiais', module:'Sistema', desc:'Cadastro de empresas e filiais. Contém CNPJ, razão social e configurações por empresa.', fields:'M0_CODIGO, M0_CODFIL, M0_CGC, M0_RAZAO, M0_ENDENT', rels:['SX2'], sql:`SELECT M0_CODIGO, M0_CODFIL, M0_RAZAO, M0_CGC
+FROM SM0010 WHERE D_E_L_E_T_ = ' '` },
+
+  { code:'SYS_USR', name:'Usuários do Sistema', module:'Sistema', desc:'Cadastro de usuários do Protheus. Controla login, senha e grupos de acesso.', fields:'US_COD, US_NOME, US_GRUPO, US_MSBLQL', rels:['SYS_COMPANY'], sql:`SELECT US_COD, US_NOME, US_GRUPO
+FROM SYS_USR WHERE D_E_L_E_T_ = ' '` },
+
+  { code:'SXP', name:'Parâmetros do Sistema', module:'Sistema', desc:'Parâmetros de configuração do Protheus (MV_xxx). Controlam comportamento de cada módulo.', fields:'X6_VAR, X6_TIPO, X6_CONTEUD, X6_DESCRI', rels:['SX2'], sql:`SELECT X6_VAR, X6_CONTEUD, X6_DESCRI
+FROM SX6010 WHERE D_E_L_E_T_ = ' '
+AND X6_VAR LIKE 'MV_EST%'` },
+
+  // CRM / VENDAS
+  { code:'SAH', name:'Histórico de Negociações', module:'CRM', desc:'Histórico de atividades comerciais com clientes. Registra visitas, ligações e follow-ups.', fields:'AH_COD, AH_CLIENTE, AH_DATA, AH_OBS', rels:['SA1'], sql:`SELECT AH_CLIENTE, AH_DATA, AH_OBS
+FROM SAH010 WHERE AH_FILIAL='01' AND D_E_L_E_T_=' '` },
+
+  // MAIS TABELAS IMPORTANTES
+  { code:'SA4', name:'Transportadoras', module:'Vendas', desc:'Cadastro de transportadoras. Usada em NF de saída e pedidos de venda.', fields:'A4_COD, A4_NOME, A4_CGC, A4_TIPO', rels:['SC5','SF2'], sql:`SELECT A4_COD, A4_NOME FROM SA4010
+WHERE A4_FILIAL='01' AND D_E_L_E_T_=' '` },
+
+  { code:'SAB', name:'Tabela de Preços', module:'Vendas', desc:'Tabela de preços de venda por produto. Permite múltiplas tabelas de preço.', fields:'AB_FILIAL, AB_TABELA, AB_CODPRO, AB_PRCVEN', rels:['SB1','SC5'], sql:`SELECT AB_TABELA, AB_CODPRO, AB_PRCVEN
+FROM SAB010 WHERE AB_FILIAL='01' AND D_E_L_E_T_=' '` },
+
+  { code:'SCC', name:'Centros de Custo', module:'Contabilidade', desc:'Cadastro de centros de custo. Base para rateios e relatórios gerenciais.', fields:'CTT_CUSTO, CTT_DESC01', rels:['CT1','SRA'], sql:`SELECT CTT_CUSTO, CTT_DESC01 FROM CTT010
+WHERE CTT_FILIAL='01' AND D_E_L_E_T_=' '` },
+
+  { code:'SFB', name:'Tributação por Estado', module:'Fiscal', desc:'Tributação por estado e produto. Define alíquotas de ICMS por UF.', fields:'FB_ESTADO, FB_PRODUTO, FB_ALIQ, FB_TRIB', rels:['SB1','SF1','SF2'], sql:`SELECT FB_ESTADO, FB_PRODUTO, FB_ALIQ
+FROM SFB010 WHERE D_E_L_E_T_=' '` },
+
+  { code:'SFC010_', name:'Cabeçalho OS', module:'Manutenção', desc:'Ordem de Serviço (manutenção). Controla manutenções preventivas e corretivas.', fields:'HU_ORDEM, HU_TIPO, HU_EQUIP, HU_DATAB, HU_STATUS', rels:['SB1'], sql:`SELECT HU_ORDEM, HU_TIPO, HU_STATUS
+FROM SHU010 WHERE HU_FILIAL='01' AND D_E_L_E_T_=' '` },
+
+  { code:'SCJ', name:'Notas de Débito/Crédito', module:'Financeiro', desc:'Notas de débito e crédito para ajuste de títulos financeiros.', fields:'CJ_NUM, CJ_TIPO, CJ_CLIFOR, CJ_VALOR', rels:['SE1','SE2'], sql:`SELECT CJ_NUM, CJ_TIPO, CJ_VALOR
+FROM SCJ010 WHERE CJ_FILIAL='01' AND D_E_L_E_T_=' '` },
+
+  { code:'SED', name:'Naturezas Financeiras', module:'Financeiro', desc:'Cadastro de naturezas financeiras para classificação de receitas e despesas.', fields:'ED_CODIGO, ED_DESCRI, ED_TIPO', rels:['SE1','SE2'], sql:`SELECT ED_CODIGO, ED_DESCRI, ED_TIPO
+FROM SED010 WHERE D_E_L_E_T_=' '` },
+
+  { code:'SF3', name:'Livro Fiscal', module:'Fiscal', desc:'Livro fiscal de entradas e saídas. Base para geração de obrigações acessórias (SPED).', fields:'F3_TIPO, F3_DOC, F3_CLIFOR, F3_DATA, F3_VALOR', rels:['SF1','SF2'], sql:`SELECT F3_TIPO, F3_DOC, F3_DATA, F3_VALOR
+FROM SF3010 WHERE F3_FILIAL='01'
+AND F3_DATA >= '20240101' AND D_E_L_E_T_=' '` },
+
+  // MAIS 50 TABELAS PARA CHEGAR EM 100
+  { code:'SHU', name:'Ordens de Serviço (Manutenção)', module:'Manutenção', desc:'Ordens de manutenção preventiva e corretiva de equipamentos.', fields:'HU_ORDEM, HU_EQUIP, HU_TIPO, HU_DATAB', rels:['SB1'], sql:`SELECT HU_ORDEM, HU_EQUIP, HU_STATUS FROM SHU010 WHERE D_E_L_E_T_=' '` },
+  { code:'SB6', name:'Referências de Produto', module:'Estoque', desc:'Referências cruzadas de produtos (código do fornecedor × código interno).', fields:'B6_COD, B6_REFORI, B6_CODORIG', rels:['SB1','SA2'], sql:`SELECT B6_COD, B6_REFORI FROM SB6010 WHERE D_E_L_E_T_=' '` },
+  { code:'SBZ', name:'Armazéns / Locais de Estoque', module:'Estoque', desc:'Cadastro de armazéns e locais de estoque.', fields:'NNR_CODIGO, NNR_DESCRI', rels:['SB2'], sql:`SELECT NNR_CODIGO, NNR_DESCRI FROM NNR010 WHERE D_E_L_E_T_=' '` },
+  { code:'SC9', name:'Pedidos Liberados p/ Faturar', module:'Vendas', desc:'Pedidos de venda liberados para faturamento após análise de crédito.', fields:'C9_PEDIDO, C9_ITEM, C9_PRODUTO, C9_QTDLIB', rels:['SC5','SC6'], sql:`SELECT C9_PEDIDO, C9_PRODUTO, C9_QTDLIB FROM SC9010 WHERE D_E_L_E_T_=' '` },
+  { code:'SCA', name:'Pré-Notas de Entrada', module:'Fiscal', desc:'Pré-notas de entrada aguardando conferência e aprovação.', fields:'CA_FORNECE, CA_DOC, CA_SERIE, CA_EMISSAO', rels:['SF1','SA2'], sql:`SELECT CA_FORNECE, CA_DOC, CA_EMISSAO FROM SCA010 WHERE D_E_L_E_T_=' '` },
+  { code:'SCB', name:'Aprovação de Documentos', module:'Fiscal', desc:'Controle de aprovação de documentos fiscais e pedidos.', fields:'CB_NUM, CB_TIPO, CB_STATUS, CB_USUARIO', rels:['SC7','SF1'], sql:`SELECT CB_NUM, CB_TIPO, CB_STATUS FROM SCB010 WHERE D_E_L_E_T_=' '` },
+  { code:'SE4', name:'Condições de Pagamento', module:'Financeiro', desc:'Cadastro de condições de pagamento. Define parcelas, prazos e descontos.', fields:'E4_CODIGO, E4_DESCRI, E4_TIPO', rels:['SA1','SA2','SC5'], sql:`SELECT E4_CODIGO, E4_DESCRI FROM SE4010 WHERE D_E_L_E_T_=' '` },
+  { code:'SFC2', name:'Requisições de Material', module:'PCP', desc:'Requisições de material para produção.', fields:'C2_NUM, C2_PRODUTO', rels:['SFC','SB1'], sql:`SELECT * FROM SFC010 WHERE D_E_L_E_T_=' '` },
+  { code:'SGE', name:'Grupos de Estoque', module:'Estoque', desc:'Grupos para classificação de itens de estoque.', fields:'GE_GRUPO, GE_DESC', rels:['SB1'], sql:`SELECT GE_GRUPO, GE_DESC FROM SGE010 WHERE D_E_L_E_T_=' '` },
+  { code:'SLJ', name:'Lojas / Filiais', module:'Sistema', desc:'Cadastro de lojas e filiais da empresa.', fields:'LJ_FILIAL, LJ_LOJA, LJ_DESC', rels:['SM0'], sql:`SELECT LJ_FILIAL, LJ_DESC FROM SLJ010 WHERE D_E_L_E_T_=' '` },
+  { code:'SM4', name:'Mensagens do Sistema', module:'Sistema', desc:'Mensagens customizadas do sistema Protheus.', fields:'M4_CODIGO, M4_TEXTO', rels:[], sql:`SELECT M4_CODIGO, M4_TEXTO FROM SM4010 WHERE D_E_L_E_T_=' '` },
+  { code:'SNA', name:'Cadastro de Equipamentos', module:'Manutenção', desc:'Equipamentos cadastrados para manutenção preventiva/corretiva.', fields:'NA_CODIGO, NA_DESCRI, NA_GRUPO', rels:['SHU'], sql:`SELECT NA_CODIGO, NA_DESCRI FROM SNA010 WHERE D_E_L_E_T_=' '` },
+  { code:'SOE', name:'Orçamentos de Venda', module:'Vendas', desc:'Cabeçalho de orçamentos de venda antes da conversão em pedido.', fields:'OE_NUM, OE_CLIENTE, OE_EMISSAO, OE_VALBRUT', rels:['SA1','SC5'], sql:`SELECT OE_NUM, OE_CLIENTE, OE_VALBRUT FROM SOE010 WHERE D_E_L_E_T_=' '` },
+  { code:'SOF', name:'Itens de Orçamento', module:'Vendas', desc:'Itens dos orçamentos de venda.', fields:'OF_NUM, OF_PRODUTO, OF_QUANT, OF_PRCVEN', rels:['SOE','SB1'], sql:`SELECT OF_NUM, OF_PRODUTO, OF_QUANT FROM SOF010 WHERE D_E_L_E_T_=' '` },
+  { code:'SPC', name:'Apontamento de Produção', module:'PCP', desc:'Apontamentos de produção (horas, quantidades produzidas por OP).', fields:'PC_ORDEM, PC_OPERAC, PC_HORAS, PC_QUANT', rels:['SFC','SG2'], sql:`SELECT PC_ORDEM, PC_OPERAC, PC_HORAS FROM SPC010 WHERE D_E_L_E_T_=' '` },
+  { code:'SQ1', name:'Qualidade — Inspeção', module:'Qualidade', desc:'Inspeções de qualidade de produtos recebidos ou produzidos.', fields:'Q1_PRODUTO, Q1_LOTE, Q1_RESULT, Q1_DATA', rels:['SB1','SB8'], sql:`SELECT Q1_PRODUTO, Q1_RESULT, Q1_DATA FROM SQ1010 WHERE D_E_L_E_T_=' '` },
+  { code:'SQB', name:'Padrões de Qualidade', module:'Qualidade', desc:'Padrões e especificações de qualidade por produto.', fields:'QB_PRODUTO, QB_ENSAIO, QB_VMIN, QB_VMAX', rels:['SB1'], sql:`SELECT QB_PRODUTO, QB_ENSAIO FROM SQB010 WHERE D_E_L_E_T_=' '` },
+  { code:'SRF', name:'Férias de Funcionários', module:'RH', desc:'Controle de férias dos funcionários.', fields:'RF_MAT, RF_DATINI, RF_DATFIM, RF_DIAS', rels:['SRA'], sql:`SELECT RF_MAT, RF_DATINI, RF_DATFIM FROM SRF010 WHERE D_E_L_E_T_=' '` },
+  { code:'SRR', name:'Horários de Trabalho', module:'RH', desc:'Cadastro de horários de trabalho e jornadas.', fields:'RR_CODIGO, RR_DESCRI, RR_TIPO', rels:['SRA'], sql:`SELECT RR_CODIGO, RR_DESCRI FROM SRR010 WHERE D_E_L_E_T_=' '` },
+  { code:'SSA', name:'Solicitações de Serviço', module:'SIGAATF', desc:'Solicitações de manutenção ou serviço interno.', fields:'SA_CODIGO, SA_DESCRI, SA_PRIORI, SA_STATUS', rels:['SHU'], sql:`SELECT SA_CODIGO, SA_STATUS FROM SSA010 WHERE D_E_L_E_T_=' '` },
+  { code:'STJ', name:'Tipos de Ocorrência', module:'RH', desc:'Tipos de ocorrência de ponto eletrônico.', fields:'TJ_CODIGO, TJ_DESCRI', rels:['SRA'], sql:`SELECT TJ_CODIGO, TJ_DESCRI FROM STJ010 WHERE D_E_L_E_T_=' '` },
+  { code:'SUB', name:'Sub-Séries de Documentos', module:'Fiscal', desc:'Configuração de sub-séries de documentos fiscais.', fields:'UB_SERIE, UB_SUBSERI, UB_TIPO', rels:['SF1','SF2'], sql:`SELECT UB_SERIE, UB_SUBSERI FROM SUB010 WHERE D_E_L_E_T_=' '` },
+  { code:'SVE', name:'Veículos', module:'Frota', desc:'Cadastro de veículos da frota da empresa.', fields:'VE_CODIGO, VE_PLACA, VE_MODELO, VE_ANO', rels:[], sql:`SELECT VE_CODIGO, VE_PLACA, VE_MODELO FROM SVE010 WHERE D_E_L_E_T_=' '` },
+  { code:'SWD', name:'Workflow — Definições', module:'Fluig/Workflow', desc:'Definições e configurações de workflows do Protheus/Fluig.', fields:'WD_CODIGO, WD_DESCRI, WD_ATIVO', rels:[], sql:`SELECT WD_CODIGO, WD_DESCRI FROM SWD010 WHERE D_E_L_E_T_=' '` },
+  { code:'SDT', name:'Detalhamento de Impostos', module:'Fiscal', desc:'Detalhamento de impostos por nota fiscal (IPI, PIS, COFINS, ICMS).', fields:'DT_DOC, DT_TIPO, DT_IMPOSTO, DT_VALOR', rels:['SF1','SF2'], sql:`SELECT DT_DOC, DT_IMPOSTO, DT_VALOR FROM SDT010 WHERE D_E_L_E_T_=' '` },
+  { code:'SFE', name:'Escrituração Fiscal', module:'Fiscal', desc:'Escrituração fiscal integrada para geração do SPED Fiscal.', fields:'FE_DOC, FE_SERIE, FE_DATA, FE_VALOR', rels:['SF1','SF2','SF3'], sql:`SELECT FE_DOC, FE_DATA FROM SFE010 WHERE D_E_L_E_T_=' '` },
+  { code:'SCK', name:'Conferência de Recebimento', module:'Compras', desc:'Conferência física do recebimento de mercadorias.', fields:'CK_DOC, CK_PRODUTO, CK_QTDPED, CK_QTDREC', rels:['SC7','SF1'], sql:`SELECT CK_DOC, CK_PRODUTO, CK_QTDPED, CK_QTDREC FROM SCK010 WHERE D_E_L_E_T_=' '` },
+  { code:'SBT', name:'Transferências de Estoque', module:'Estoque', desc:'Transferências de produtos entre armazéns ou filiais.', fields:'BT_ORIGINE, BT_DESTINO, BK_CODPRO, BT_QUANT', rels:['SB2','SB1'], sql:`SELECT BT_ORIGINE, BT_DESTINO, BT_QUANT FROM SBT010 WHERE D_E_L_E_T_=' '` },
+  { code:'SFC3', name:'Previsão de Materiais (MRP)', module:'PCP', desc:'Planejamento de necessidades de materiais (MRP).', fields:'MR_PRODUTO, MR_DATA, MR_NECRES', rels:['SB1','SG1'], sql:`SELECT MR_PRODUTO, MR_DATA FROM SMR010 WHERE D_E_L_E_T_=' '` },
+  { code:'SXA', name:'Tabelas de Consulta (F3)', module:'Dicionário', desc:'Configuração das consultas padrão F3 do Protheus.', fields:'XA_ALIAS, XA_TIPO, XA_TITULO', rels:['SX3'], sql:`SELECT XA_ALIAS, XA_TITULO FROM SXA010 WHERE D_E_L_E_T_=' '` },
+  { code:'SXB', name:'Consultas SQL do Sistema', module:'Dicionário', desc:'Consultas SQL configuradas para as pesquisas F3.', fields:'XB_ALIAS, XB_TIPO, XB_DESCRI, XB_CAMPO', rels:['SXA'], sql:`SELECT XB_ALIAS, XB_TIPO FROM SXB010 WHERE D_E_L_E_T_=' '` },
+  { code:'SXD', name:'Gatilhos de Campos', module:'Dicionário', desc:'Gatilhos (triggers) de campos para preenchimento automático de outros campos.', fields:'XD_ARQUIVO, XD_CAMPO, XD_SEQUEN, XD_CAMPO2', rels:['SX3'], sql:`SELECT XD_ARQUIVO, XD_CAMPO, XD_CAMPO2 FROM SXD010 WHERE D_E_L_E_T_=' '` },
+  { code:'SXE', name:'Perguntas dos Relatórios', module:'Dicionário', desc:'Perguntas (parâmetros) de entrada dos relatórios SIGR.', fields:'XE_GRUP, XE_ORDEM, XE_PERGUNT, XE_TIPO', rels:[], sql:`SELECT XE_GRUP, XE_PERGUNT FROM SXE010 WHERE D_E_L_E_T_=' '` },
+  { code:'SXF', name:'Respostas das Perguntas', module:'Dicionário', desc:'Respostas salvas das perguntas de relatórios.', fields:'XF_GRUP, XF_ORDEM, XF_RESPOS1', rels:['SXE'], sql:`SELECT XF_GRUP, XF_RESPOS1 FROM SXF010 WHERE D_E_L_E_T_=' '` },
+  { code:'SXI', name:'Integrações Externas', module:'Dicionário', desc:'Configuração de integrações com sistemas externos.', fields:'XI_CODIGO, XI_TIPO, XI_URL', rels:[], sql:`SELECT XI_CODIGO, XI_TIPO FROM SXI010 WHERE D_E_L_E_T_=' '` },
+  { code:'SEB', name:'Contas Contábeis por Produto', module:'Contabilidade', desc:'Vinculo de contas contábeis por produto para lançamentos automáticos.', fields:'EB_FILIAL, EB_PRODUTO, EB_CONTA', rels:['SB1','CTT'], sql:`SELECT EB_PRODUTO, EB_CONTA FROM SEB010 WHERE D_E_L_E_T_=' '` },
+  { code:'SEG', name:'Grupos de Contas Contábeis', module:'Contabilidade', desc:'Agrupamentos de contas para relatórios contábeis e balanço.', fields:'EG_CODIGO, EG_DESCRI, EG_TIPO', rels:['CTT'], sql:`SELECT EG_CODIGO, EG_DESCRI FROM SEG010 WHERE D_E_L_E_T_=' '` },
+  { code:'STN', name:'Tributos e Alíquotas', module:'Fiscal', desc:'Cadastro de tributos (IPI, PIS, COFINS, ISS) com alíquotas.', fields:'TN_CODIGO, TN_DESCRI, TN_ALIQ', rels:['SF4'], sql:`SELECT TN_CODIGO, TN_ALIQ FROM STN010 WHERE D_E_L_E_T_=' '` },
+  { code:'SFC4', name:'Liberação de Pedidos', module:'Vendas', desc:'Controle de liberação de crédito de pedidos de venda.', fields:'LB_PEDIDO, LB_STATUS, LB_USUARIO', rels:['SC5'], sql:`SELECT LB_PEDIDO, LB_STATUS FROM SLB010 WHERE D_E_L_E_T_=' '` },
+  { code:'SYS_COMPANY', name:'Configuração de Empresas', module:'Sistema', desc:'Configurações internas de empresas e filiais do sistema LG.', fields:'FIL_ID, FIL_DESC, FIL_CGC', rels:['SM0'], sql:`SELECT FIL_ID, FIL_DESC FROM SYS_COMPANY WHERE D_E_L_E_T_=' '` },
+  { code:'SMK', name:'Moedas e Cotações', module:'Financeiro', desc:'Cadastro de moedas e cotações para conversão de valores.', fields:'MK_CODIGO, MK_DATA, MK_TAXA1', rels:['SE1','SE2'], sql:`SELECT MK_CODIGO, MK_DATA, MK_TAXA1 FROM SMK010 WHERE D_E_L_E_T_=' '` },
+  { code:'SDA', name:'Duplicatas de NF', module:'Financeiro', desc:'Duplicatas geradas automaticamente pelas notas fiscais.', fields:'DA_NUM, DA_PARCELA, DA_TIPO, DA_VALOR', rels:['SF1','SF2','SE1'], sql:`SELECT DA_NUM, DA_PARCELA, DA_VALOR FROM SDA010 WHERE D_E_L_E_T_=' '` },
+  { code:'SQJ', name:'Cheques Recebidos', module:'Financeiro', desc:'Controle de cheques recebidos de clientes.', fields:'QJ_NUM, QJ_CLIFOR, QJ_DATA, QJ_VALOR', rels:['SE1','SA1'], sql:`SELECT QJ_NUM, QJ_CLIFOR, QJ_VALOR FROM SQJ010 WHERE D_E_L_E_T_=' '` },
+  { code:'SFC5', name:'Contratos de Compra', module:'Compras', desc:'Contratos de fornecimento com fornecedores.', fields:'CN9_NUMERO, CN9_FORNEC, CN9_VALOR', rels:['SA2'], sql:`SELECT CN9_NUMERO, CN9_FORNEC FROM SCN9010 WHERE D_E_L_E_T_=' '` },
+  { code:'SFJ', name:'Notas Fiscais Eletrônicas', module:'Fiscal', desc:'Controle das NF-e emitidas e recebidas com chave de acesso e status SEFAZ.', fields:'FJ_CHVNFE, FJ_STATUS, FJ_CSITUA', rels:['SF2'], sql:`SELECT FJ_CHVNFE, FJ_STATUS FROM SFJ010 WHERE D_E_L_E_T_=' '` },
+  { code:'SB3', name:'Inventário de Estoque', module:'Estoque', desc:'Controle de inventário físico de estoque. Compara saldo sistema × contagem física.', fields:'B3_COD, B3_LOCAL, B3_QUANT, B3_QINV', rels:['SB1','SB2'], sql:`SELECT B3_COD, B3_LOCAL, B3_QUANT, B3_QINV FROM SB3010 WHERE D_E_L_E_T_=' '` },
+  { code:'SDE', name:'Espécies de Documentos', module:'Fiscal', desc:'Espécies de documentos fiscais (NF, CT-e, duplicata, boleto).', fields:'DE_CODIGO, DE_DESCRI', rels:['SE1','SE2','SF1'], sql:`SELECT DE_CODIGO, DE_DESCRI FROM SDE010 WHERE D_E_L_E_T_=' '` },
+  { code:'SB4', name:'Endereços de Estoque', module:'Estoque', desc:'Configuração de endereços físicos do armazém para WMS.', fields:'B4_LOCAL, B4_ROTA, B4_CORREDOR, B3_PRATEL', rels:['SB2','SBK'], sql:`SELECT B4_LOCAL, B4_ROTA FROM SB4010 WHERE D_E_L_E_T_=' '` },
+];
+
+// ====================== LEVELS ======================
+const LEVELS = [
+  { min:0, max:100, name:'🔰 Iniciante', label:'Iniciante' },
+  { min:100, max:300, name:'📖 Analista Jr', label:'Analista Jr' },
+  { min:300, max:600, name:'🔧 Analista Pleno', label:'Analista Pleno' },
+  { min:600, max:1000, name:'⚙️ Desenvolvedor', label:'Desenvolvedor' },
+  { min:1000, max:1500, name:'🏗️ Consultor', label:'Consultor' },
+  { min:1500, max:2200, name:'🎯 Especialista', label:'Especialista' },
+  { min:2200, max:3000, name:'🏆 Sênior', label:'Sênior' },
+  { min:3000, max:99999, name:'🚀 Arquiteto Protheus', label:'Arquiteto' },
+];
+
+// ====================== STATE ======================
+let state = { xp:0, streak:0, maxStreak:0, totalCorrect:0, totalAnswered:0 };
+let quizState = { questions:[], current:0, mode:'', xpEarned:0, correct:0, maxStreak:0, streak:0, timer:null, timeLeft:20 };
+const XP_MAP = { quick:10, marathon:15, sql:20 };
+
+// ====================== QUESTION GENERATORS ======================
+function generateQuestions(mode, count) {
+  const qs = [];
+  const validTables = TABLES.filter(t => t.name && t.name !== '_removido_' && t.module !== '_');
+  const pool = [...validTables].sort(() => Math.random()-0.5).slice(0, Math.min(count*3, validTables.length));
+  const types = mode === 'sql'
+    ? ['relationship','sql','reverse_rel','use_case']
+    : ['identify','reverse','relationship','use_case','sql','field_guess','scenario'];
+
+  for(let i = 0; i < count && i < pool.length; i++) {
+    const t = pool[i];
+    const type = types[Math.floor(Math.random()*types.length)];
+    const q = buildQuestion(t, type, pool);
+    if(q) qs.push(q);
+  }
+  return qs;
+}
+
+function getRandom(arr, exclude=[], n=3) {
+  return arr.filter(x => !exclude.includes(x.code)).sort(()=>Math.random()-0.5).slice(0,n);
+}
+
+function buildQuestion(table, type, pool) {
+  const others = getRandom(pool, [table.code], 3);
+  if(others.length < 3) return null;
+
+  switch(type) {
+    case 'identify': return {
+      type:'Identificação', xp: XP_MAP[quizState.mode],
+      text: `Qual tabela armazena "${table.name}"?`,
+      context: `Módulo: ${table.module} · Campos principais: ${table.fields.split(',')[0].trim()}, ${(table.fields.split(',')[1]||'').trim()}`,
+      options: shuffle([table.code, ...others.map(o=>o.code)]),
+      correct: table.code,
+      feedback: table.desc,
+      sql: table.sql
+    };
+    case 'reverse': return {
+      type:'O que é?', xp: XP_MAP[quizState.mode],
+      text: `O que a tabela <strong>${table.code}</strong> armazena?`,
+      context: `Módulo: ${table.module}`,
+      options: shuffle([table.name, ...others.map(o=>o.name)]),
+      correct: table.name,
+      feedback: table.desc,
+      sql: table.sql
+    };
+    case 'relationship': {
+      if(!table.rels || table.rels.length === 0) return buildQuestion(table,'identify',pool);
+      const rel = table.rels[Math.floor(Math.random()*table.rels.length)];
+      const wrongRels = getRandom(pool,[table.code,rel],3).map(o=>o.code);
+      return {
+        type:'Relacionamento', xp: XP_MAP[quizState.mode]+5,
+        text: `A tabela <strong>${table.code}</strong> se relaciona com qual dessas tabelas?`,
+        context: `${table.name} · ${table.desc.substring(0,80)}...`,
+        options: shuffle([rel, ...wrongRels.slice(0,3)]),
+        correct: rel,
+        feedback: `${table.code} → ${rel}: ${table.desc}`,
+        sql: table.sql
+      };
+    }
+    case 'reverse_rel': {
+      const target = others[0];
+      const isRel = table.rels && table.rels.includes(target.code);
+      const wrongCode = others[Math.floor(Math.random()*others.length)].code;
+      const opts = isRel
+        ? shuffle(['Sim, se relacionam', 'Não se relacionam', 'São a mesma tabela', 'Relação indireta apenas'])
+        : shuffle(['Não se relacionam diretamente', 'Sim, relação 1:N', 'São a mesma tabela', 'Relação obrigatória']);
+      const correct = isRel ? 'Sim, se relacionam' : 'Não se relacionam diretamente';
+      return {
+        type:'Relacionamento', xp: XP_MAP[quizState.mode]+5,
+        text: `<strong>${table.code}</strong> e <strong>${target.code}</strong> se relacionam no Protheus?`,
+        context: `${table.code}: ${table.name} | ${target.code}: ${target.name}`,
+        options: opts, correct,
+        feedback: isRel
+          ? `Sim! ${table.code} (${table.name}) referencia ${target.code} (${target.name})`
+          : `Não há relacionamento direto entre ${table.code} e ${target.code}`,
+        sql: table.sql
+      };
+    }
+    case 'use_case': {
+      const cases = [
+        // ESTOQUE
+        { q:`Você precisa consultar o saldo atual em estoque de um produto por armazém. Qual tabela usar?`, a:'SB2', wrong:['SB1','SD3','SBK'] },
+        { q:`Para montar um dashboard de AGING DE ESTOQUE (dias sem movimentação por produto), qual é a tabela de saldo?`, a:'SB2', wrong:['SB1','SD3','SB9'] },
+        { q:`Qual tabela contém o cadastro mestre de produtos com código, descrição e unidade de medida?`, a:'SB1', wrong:['SB2','SB9','SB5'] },
+        { q:`Para calcular o CUSTO MÉDIO de cada produto e valorizar o estoque, qual tabela usar?`, a:'SB9', wrong:['SB2','SB1','SD3'] },
+        { q:`Você precisa saber quais produtos têm saldo NEGATIVO no estoque. Qual tabela consultar?`, a:'SB2', wrong:['SB1','SB9','SD3'] },
+        { q:`Para rastrear um produto por LOTE DE FABRICAÇÃO e data de vencimento, qual tabela usar?`, a:'SB8', wrong:['SB1','SB2','SD3'] },
+        { q:`O controller pediu uma análise de GIRO DE ESTOQUE: saídas ÷ estoque médio. Quais tabelas cruzar?`, a:'SD2', wrong:['SD3','SB2','SD1'] },
+        { q:`Para verificar a LOCALIZAÇÃO FÍSICA de um produto no armazém (endereçamento/WMS), qual tabela?`, a:'SBK', wrong:['SB2','SB1','SB4'] },
+        { q:`Preciso listar todos os MOVIMENTOS INTERNOS de estoque (transferências e ajustes). Qual tabela?`, a:'SD3', wrong:['SB2','SBT','SD2'] },
+        { q:`Para montar relatório de COBERTURA DE ESTOQUE (dias de estoque restante), qual tabela de saldo usar?`, a:'SB2', wrong:['SB9','SB1','SB3'] },
+        { q:`O inventário físico divergiu do sistema. Qual tabela armazena os dados do INVENTÁRIO FÍSICO para conciliação?`, a:'SB3', wrong:['SB2','SB1','SD3'] },
+
+        // FISCAL ENTRADAS
+        { q:`Para listar todas as NOTAS FISCAIS DE ENTRADA de um fornecedor (cabeçalho), qual tabela consultar?`, a:'SF1', wrong:['SD1','SC7','SE2'] },
+        { q:`Você precisa analisar os ITENS COMPRADOS por produto em todas as NFs de entrada do mês. Qual tabela?`, a:'SD1', wrong:['SF1','SC7','SB1'] },
+        { q:`Para calcular o VOLUME DE COMPRAS por fornecedor e produto no trimestre, qual tabela de itens usar?`, a:'SD1', wrong:['SC7','SF1','SE2'] },
+        { q:`Preciso conferir se a QUANTIDADE RECEBIDA na NF bate com o que foi pedido. Quais tabelas cruzar (itens)?`, a:'SD1', wrong:['SF1','SC7','SCK'] },
+        { q:`Um auditor quer o VALOR TOTAL DE IPI nas entradas do mês por produto. Qual tabela tem os itens com impostos?`, a:'SD1', wrong:['SF1','SDT','SF4'] },
+
+        // FISCAL SAÍDAS
+        { q:`Para montar um relatório de FATURAMENTO (NFs de saída), qual a tabela de CABEÇALHO?`, a:'SF2', wrong:['SD2','SC5','SE1'] },
+        { q:`Preciso analisar o FATURAMENTO POR PRODUTO (quantidade e valor vendido). Qual tabela de ITENS usar?`, a:'SD2', wrong:['SF2','SC6','SB1'] },
+        { q:`Para calcular a CURVA ABC de vendas por produto no semestre, qual tabela consultar?`, a:'SD2', wrong:['SC6','SF2','SB2'] },
+        { q:`O diretor quer um ranking de PRODUTOS MAIS VENDIDOS em valor. Qual tabela tem quantidade e preço por item de NF?`, a:'SD2', wrong:['SC6','SF2','SC5'] },
+        { q:`Para calcular a MARGEM BRUTA por produto (preço venda − custo médio), quais tabelas cruzar?`, a:'SD2', wrong:['SF2','SC6','SB1'] },
+        { q:`Preciso saber o TICKET MÉDIO por cliente (valor NF ÷ número de NFs). Qual tabela de cabeçalho usar?`, a:'SF2', wrong:['SC5','SE1','SD2'] },
+        { q:`Para identificar clientes que NÃO compraram nos últimos 90 dias (churn), quais tabelas cruzar?`, a:'SF2', wrong:['SC5','SA1','SE1'] },
+        { q:`O SPED Fiscal exige o livro de saídas. Qual tabela alimenta os registros C100/C170?`, a:'SF2', wrong:['SF3','SD2','SFE'] },
+
+        // TRIBUTAÇÃO
+        { q:`Para saber qual alíquota de ICMS aplicar numa venda de SP para MG, qual tabela consultar?`, a:'SFT', wrong:['SFB','SF4','STN'] },
+        { q:`O produto tem substituição tributária. Para buscar a alíquota de ICMS-ST por estado, qual tabela?`, a:'SFT', wrong:['SFB','SF4','SDT'] },
+        { q:`Para configurar como o Protheus deve tratar FISCALMENTE uma operação (estoque, duplicata, contábil), qual tabela?`, a:'SF4', wrong:['SFT','SFB','STN'] },
+
+        // FINANCEIRO
+        { q:`Preciso criar um dashboard de CONTAS A RECEBER em aberto por vencimento. Qual tabela principal?`, a:'SE1', wrong:['SE2','SE5','SDA'] },
+        { q:`Para fazer o FLUXO DE CAIXA a pagar dos próximos 30 dias, qual tabela usar?`, a:'SE2', wrong:['SE1','SE5','SCJ'] },
+        { q:`O tesoureiro quer ver todos os PAGAMENTOS REALIZADOS hoje. Qual tabela de movimentos bancários?`, a:'SE5', wrong:['SE1','SE2','SEA'] },
+        { q:`Preciso identificar títulos VENCIDOS há mais de 60 dias por cliente. Qual tabela?`, a:'SE1', wrong:['SE2','SDA','SE5'] },
+        { q:`Para calcular o INADIMPLÊNCIA (% de títulos vencidos × total a receber), qual tabela usar?`, a:'SE1', wrong:['SE2','SE5','SA1'] },
+        { q:`O banco pediu o extrato de BORDERÔ DE COBRANÇA enviado. Qual tabela consultar?`, a:'SEA', wrong:['SE5','SE1','SA6'] },
+        { q:`Para identificar qual BANCO e CONTA tem o maior saldo disponível, qual tabela?`, a:'SA6', wrong:['SE5','SEA','SMK'] },
+
+        // COMPRAS
+        { q:`Você quer listar todos os PEDIDOS DE COMPRA emitidos e seus status. Qual a tabela?`, a:'SC7', wrong:['SC1','SF1','SA2'] },
+        { q:`Para analisar quais SOLICITAÇÕES DE COMPRA ainda não viraram pedido, qual tabela?`, a:'SC1', wrong:['SC7','SF1','SCK'] },
+        { q:`Preciso saber o PRAZO MÉDIO DE ENTREGA por fornecedor (data pedido × data entrada NF). Quais tabelas?`, a:'SC7', wrong:['SC1','SF1','SA2'] },
+        { q:`Para fazer o CADASTRO DE FORNECEDORES com CNPJ e condição de pagamento, qual tabela?`, a:'SA2', wrong:['SA1','SC7','SE4'] },
+        { q:`Quero verificar a CONFERÊNCIA DE RECEBIMENTO: qtd pedida × qtd recebida. Qual tabela?`, a:'SCK', wrong:['SC7','SD1','SF1'] },
+
+        // VENDAS
+        { q:`Para listar os PEDIDOS DE VENDA em aberto de um cliente, qual tabela de cabeçalho?`, a:'SC5', wrong:['SF2','SC6','SE1'] },
+        { q:`Preciso ver os ITENS de um pedido de venda: produto, quantidade e preço. Qual tabela?`, a:'SC6', wrong:['SC5','SD2','SB1'] },
+        { q:`Para saber quais pedidos estão BLOQUEADOS para faturamento (análise de crédito), qual tabela?`, a:'SC9', wrong:['SC5','SC6','SE1'] },
+        { q:`O gerente de vendas quer o RANKING DE VENDEDORES por faturamento. Qual tabela de vendedores?`, a:'SA3', wrong:['SA1','SC5','SF2'] },
+        { q:`Para aplicar desconto baseado em TABELA DE PREÇOS por cliente, qual tabela consultar?`, a:'SAB', wrong:['SC5','SC6','SA1'] },
+
+        // PCP / PRODUÇÃO
+        { q:`Para consultar as ORDENS DE PRODUÇÃO abertas e suas quantidades, qual tabela?`, a:'SFC', wrong:['SFD','SG1','SPC'] },
+        { q:`Preciso ver quais COMPONENTES compõem um produto acabado (BOM/estrutura). Qual tabela?`, a:'SG1', wrong:['SFD','SFC','SG2'] },
+        { q:`Para calcular o TEMPO DE PRODUÇÃO por operação e ordem, qual tabela de apontamentos?`, a:'SPC', wrong:['SFC','SG2','SFD'] },
+        { q:`O MRP gerou necessidades de compra. Qual tabela armazena a PREVISÃO DE MATERIAIS?`, a:'SFC3', wrong:['SC1','SG1','SFC'] },
+
+        // DICIONÁRIO / TÉCNICO
+        { q:`Para ver os RELACIONAMENTOS entre tabelas no dicionário (SX9), qual tabela consultar?`, a:'SX9', wrong:['SX2','SX3','SXD'] },
+        { q:`Qual tabela define a ESTRUTURA DE CAMPOS de cada tabela do Protheus (tamanho, tipo, validação)?`, a:'SX3', wrong:['SX2','SX9','SIX'] },
+        { q:`Para listar todas as TABELAS existentes no Protheus com nome e módulo, qual tabela do dicionário?`, a:'SX2', wrong:['SX3','SX9','SIX'] },
+        { q:`Preciso consultar os GATILHOS (triggers) de campos para entender o preenchimento automático. Qual tabela?`, a:'SXD', wrong:['SX3','SXB','SXA'] },
+        { q:`Para entender uma CONSULTA PADRÃO F3 (origem dos dados do lookup), qual tabela consultar?`, a:'SXB', wrong:['SXA','SX3','SXD'] },
+        { q:`Qual tabela armazena os PARÂMETROS DO SISTEMA (MV_xxx) com seus conteúdos padrão?`, a:'SXP', wrong:['SX2','SX3','SM0'] },
+        { q:`Para ver os ÍNDICES de busca de uma tabela (chaves de pesquisa), qual tabela do dicionário?`, a:'SIX', wrong:['SX2','SX3','SX9'] },
+
+        // CONTABILIDADE
+        { q:`Para montar o BALANCETE CONTÁBIL, qual tabela tem os lançamentos de débito e crédito?`, a:'CT1', wrong:['CTT','CT2','SEG'] },
+        { q:`Preciso consultar o PLANO DE CONTAS com hierarquia e tipo (ativo/passivo/resultado). Qual tabela?`, a:'CTT', wrong:['CT1','CT2','SEB'] },
+
+        // RH
+        { q:`O RH quer a FOLHA DE SALÁRIOS com verbas de cada funcionário. Qual tabela de verbas usar?`, a:'SRD', wrong:['SRA','SRB','SRC'] },
+        { q:`Para listar os FUNCIONÁRIOS ATIVOS com cargo e salário, qual tabela principal?`, a:'SRA', wrong:['SRB','SRD','SRC'] },
+      ];
+      const useCase = cases.find(c => c.a === table.code);
+      if(!useCase) return buildQuestion(table,'identify',pool);
+      const allWrong = [...useCase.wrong, ...others.map(o=>o.code)];
+      const wrongOpts = [...new Set(allWrong)].slice(0,3);
+      return {
+        type:'Caso de Uso', xp: XP_MAP[quizState.mode]+5,
+        text: useCase.q,
+        context: null,
+        options: shuffle([useCase.a, ...wrongOpts]),
+        correct: useCase.a,
+        feedback: TABLES.find(t=>t.code===useCase.a)?.desc || '',
+        sql: TABLES.find(t=>t.code===useCase.a)?.sql || ''
+      };
+    }
+    case 'field_guess': {
+      const field = table.fields.split(',')[0].trim();
+      return {
+        type:'Campo', xp: XP_MAP[quizState.mode],
+        text: `O campo <strong>${field}</strong> pertence a qual tabela?`,
+        context: `Dica: módulo ${table.module}`,
+        options: shuffle([table.code, ...others.map(o=>o.code)]),
+        correct: table.code,
+        feedback: `${field} é o campo chave da ${table.code} — ${table.name}`,
+        sql: table.sql
+      };
+    }
+    case 'scenario': {
+      const scenarios = [
+        {
+          q:`🏭 CENÁRIO: O gerente industrial quer um dashboard de Aging de Estoque mostrando há quantos dias cada produto está parado. Quais duas tabelas são obrigatórias?`,
+          ctx:`Aging = tempo sem movimentação. Você precisa de saldo atual e data do último movimento.`,
+          a:`SB2 (saldo) + SD3 (movimentos internos)`, wrong:[`SB1 (cadastro) + SF2 (NF saída)`,`SF1 (NF entrada) + SC7 (pedido compra)`,`SB9 (custos) + SB1 (cadastro)`],
+          fb:`SB2 traz o saldo atual por produto/armazém. SD3 tem o último movimento interno (data). O cruzamento dá o aging exato.`,
+          sql:`SELECT B2_COD, B1_DESC, B2_QATU,
+  MAX(D3_EMISSAO) AS ULT_MOVIMENTO,
+  DATEDIFF(DAY, MAX(D3_EMISSAO), GETDATE()) AS DIAS_PARADO
+FROM SB2010 B2
+LEFT JOIN SD3010 D3 ON D3_COD=B2_COD AND D3_FILIAL=B2_FILIAL AND D3.D_E_L_E_T_=' '
+INNER JOIN SB1010 B1 ON B1_COD=B2_COD AND B1_FILIAL=B2_FILIAL AND B1.D_E_L_E_T_=' '
+WHERE B2_FILIAL='01' AND B2_QATU > 0 AND B2.D_E_L_E_T_=' '
+GROUP BY B2_COD, B1_DESC, B2_QATU
+ORDER BY DIAS_PARADO DESC`
+        },
+        {
+          q:`💰 CENÁRIO: O controller quer a MARGEM BRUTA por produto no mês: (Preço Venda − Custo Médio) × Qtd. Quais tabelas usar?`,
+          ctx:`Você precisa de: itens de NF de saída (preço e qtd vendida) + custo médio do produto.`,
+          a:`SD2 (itens NF saída) + SB9 (custo médio)`, wrong:[`SF2 (cabeçalho NF) + SB1 (cadastro)`,`SC6 (itens pedido) + SB2 (saldo)`,`SD1 (itens entrada) + SB9 (custo)`],
+          fb:`SD2 tem D2_PRCVEN (preço de venda) e D2_QUANT (qtd faturada). SB9 tem B9_CM1 (custo médio). Margem = (D2_PRCVEN - B9_CM1) × D2_QUANT.`,
+          sql:`SELECT D2_COD, B1_DESC,
+  SUM(D2_QUANT) AS QTD_VENDIDA,
+  AVG(D2_PRCVEN) AS PRECO_MEDIO,
+  B9_CM1 AS CUSTO_MEDIO,
+  SUM((D2_PRCVEN - B9_CM1) * D2_QUANT) AS MARGEM_BRUTA
+FROM SD2010 D2
+INNER JOIN SB9010 B9 ON B9_COD=D2_COD AND B9_FILIAL=D2_FILIAL AND B9.D_E_L_E_T_=' '
+INNER JOIN SB1010 B1 ON B1_COD=D2_COD AND B1_FILIAL=D2_FILIAL AND B1.D_E_L_E_T_=' '
+WHERE D2_FILIAL='01' AND D2_EMISSAO >= '20240101' AND D2.D_E_L_E_T_=' '
+GROUP BY D2_COD, B1_DESC, B9_CM1
+ORDER BY MARGEM_BRUTA DESC`
+        },
+        {
+          q:`📦 CENÁRIO: Auditoria quer comparar o que foi PEDIDO vs o que foi RECEBIDO vs o que foi FATURADO para cada produto. Quais 3 tabelas cruzar?`,
+          ctx:`Ciclo completo: Pedido de Compra → NF de Entrada → Itens da NF`,
+          a:`SC7 (pedido) + SF1 (NF entrada) + SD1 (itens entrada)`, wrong:[`SC1 + SC7 + SB2`,`SF1 + SF2 + SE1`,`SD1 + SD2 + SB1`],
+          fb:`SC7 tem o pedido (C7_QUANT). SF1 é o cabeçalho da NF entrada. SD1 tem os itens recebidos (D1_QUANT). O cruzamento revela divergências.`,
+          sql:`SELECT C7_PRODUTO, B1_DESC,
+  SUM(C7_QUANT) AS QTD_PEDIDA,
+  SUM(D1_QUANT) AS QTD_RECEBIDA,
+  SUM(C7_QUANT) - SUM(D1_QUANT) AS DIFERENCA
+FROM SC7010 C7
+LEFT JOIN SD1010 D1 ON D1_PEDIDO=C7_NUM AND D1_FILIAL=C7_FILIAL AND D1.D_E_L_E_T_=' '
+INNER JOIN SB1010 B1 ON B1_COD=C7_PRODUTO AND B1.D_E_L_E_T_=' '
+WHERE C7_FILIAL='01' AND C7.D_E_L_E_T_=' '
+GROUP BY C7_PRODUTO, B1_DESC`
+        },
+        {
+          q:`🔴 CENÁRIO: Power BI precisa calcular o ÍNDICE DE INADIMPLÊNCIA: títulos vencidos ÷ total a receber. Qual tabela única resolve isso?`,
+          ctx:`Inadimplência = E1_VENCREA < hoje E E1_SALDO > 0 E E1_BAIXA = ' '`,
+          a:`SE1 (contas a receber)`, wrong:[`SE2 (contas a pagar)`,`SE5 (movimentos bancários)`,`SF2 (NF de saída)`],
+          fb:`SE1 tem vencimento (E1_VENCREA), saldo (E1_SALDO) e status de baixa (E1_BAIXA). Com esses 3 campos você calcula vencido × total.`,
+          sql:`SELECT
+  SUM(CASE WHEN E1_VENCREA < CONVERT(VARCHAR,GETDATE(),112) THEN E1_SALDO ELSE 0 END) AS VENCIDO,
+  SUM(E1_SALDO) AS TOTAL_RECEBER,
+  ROUND(SUM(CASE WHEN E1_VENCREA < CONVERT(VARCHAR,GETDATE(),112) THEN E1_SALDO ELSE 0 END) / NULLIF(SUM(E1_SALDO),0) * 100, 2) AS PCT_INADIMPLENCIA
+FROM SE1010
+WHERE E1_FILIAL='01' AND E1_SALDO > 0 AND E1_BAIXA=' ' AND D_E_L_E_T_=' '`
+        },
+        {
+          q:`🧾 CENÁRIO: Uma indústria em MG vai vender para cliente em SP. Precisa saber a alíquota de ICMS interestadual para o produto. Qual tabela consultar?`,
+          ctx:`Tributação varia por produto e estado de destino. Alíquota interestadual MG→SP = 12%.`,
+          a:`SFT (tributação por produto/UF)`, wrong:[`SF4 (TES)`,`SFB (tributação por estado)`,`STN (tributos)`],
+          fb:`SFT cruza produto × estado de destino e traz a alíquota de ICMS (FT_ALIQ), IPI (FT_IPIALIQ), PIS, COFINS e ST. É a tabela que a NF-e consulta na emissão.`,
+          sql:`SELECT FT_PRODUTO, FT_ESTADO, FT_ALIQ, FT_ICMSST, FT_IPIALIQ
+FROM SFT010
+WHERE FT_FILIAL='01'
+  AND FT_PRODUTO='PROD001'
+  AND FT_ESTADO='SP'
+  AND D_E_L_E_T_=' '`
+        },
+        {
+          q:`📊 CENÁRIO: Dashboard de COBERTURA DE ESTOQUE: quantos dias de estoque restam com base no consumo médio diário. Quais tabelas?`,
+          ctx:`Cobertura = Estoque Atual ÷ Consumo Médio Diário. Consumo vem das saídas.`,
+          a:`SB2 (saldo) + SD2 (itens NF saída)`, wrong:[`SB1 + SB9`,`SF2 + SE1`,`SD3 + SB1`],
+          fb:`SB2 traz B2_QATU (estoque atual). SD2 traz D2_QUANT (quantidade vendida) para calcular consumo médio. Cobertura = B2_QATU ÷ (total D2_QUANT ÷ dias).`,
+          sql:`SELECT B2_COD, B1_DESC, B2_QATU,
+  ISNULL(SUM(D2_QUANT)/90.0, 0) AS CONSUMO_DIARIO,
+  CASE WHEN SUM(D2_QUANT) > 0
+    THEN B2_QATU / (SUM(D2_QUANT)/90.0)
+    ELSE 999 END AS DIAS_COBERTURA
+FROM SB2010 B2
+INNER JOIN SB1010 B1 ON B1_COD=B2_COD AND B1_FILIAL=B2_FILIAL AND B1.D_E_L_E_T_=' '
+LEFT JOIN SD2010 D2 ON D2_COD=B2_COD AND D2_FILIAL=B2_FILIAL
+  AND D2_EMISSAO >= CONVERT(VARCHAR,DATEADD(DAY,-90,GETDATE()),112) AND D2.D_E_L_E_T_=' '
+WHERE B2_FILIAL='01' AND B2.D_E_L_E_T_=' '
+GROUP BY B2_COD, B1_DESC, B2_QATU
+ORDER BY DIAS_COBERTURA ASC`
+        },
+        {
+          q:`💸 CENÁRIO: O CFO quer o FLUXO DE CAIXA dos próximos 30 dias: entradas previstas vs saídas previstas. Quais tabelas?`,
+          ctx:`Entradas = contas a receber com vencimento futuro. Saídas = contas a pagar com vencimento futuro.`,
+          a:`SE1 (receber) + SE2 (pagar)`, wrong:[`SF1 + SF2`,`SE5 + SEA`,`SC5 + SC7`],
+          fb:`SE1 tem os títulos a receber (E1_VENCREA, E1_SALDO). SE2 tem os títulos a pagar (E2_VENCREA, E2_SALDO). O cruzamento por data de vencimento monta o fluxo.`,
+          sql:`SELECT VENCIMENTO, TIPO,
+  SUM(VALOR) AS TOTAL
+FROM (
+  SELECT E1_VENCREA AS VENCIMENTO, 'ENTRADA' AS TIPO, E1_SALDO AS VALOR
+  FROM SE1010 WHERE E1_FILIAL='01' AND E1_SALDO>0 AND E1_BAIXA=' '
+    AND E1_VENCREA BETWEEN CONVERT(VARCHAR,GETDATE(),112)
+    AND CONVERT(VARCHAR,DATEADD(DAY,30,GETDATE()),112) AND D_E_L_E_T_=' '
+  UNION ALL
+  SELECT E2_VENCREA, 'SAIDA', E2_SALDO
+  FROM SE2010 WHERE E2_FILIAL='01' AND E2_SALDO>0 AND E2_BAIXA=' '
+    AND E2_VENCREA BETWEEN CONVERT(VARCHAR,GETDATE(),112)
+    AND CONVERT(VARCHAR,DATEADD(DAY,30,GETDATE()),112) AND D_E_L_E_T_=' '
+) FC GROUP BY VENCIMENTO, TIPO ORDER BY VENCIMENTO`
+        },
+        {
+          q:`🏗️ CENÁRIO: Você precisa calcular o CUSTO TOTAL DE UMA ORDEM DE PRODUÇÃO: materiais consumidos × custo médio. Quais tabelas?`,
+          ctx:`Custo da OP = componentes consumidos (SD3) × custo médio de cada componente (SB9).`,
+          a:`SD3 (movimentos internos) + SB9 (custo médio)`, wrong:[`SFC + SFD`,`SG1 + SB1`,`SPC + SG2`],
+          fb:`SD3 tem os componentes baixados para a OP (D3_OP, D3_COD, D3_QUANT). SB9 tem o custo médio (B9_CM1). Multiplicando e somando, você tem o custo real da OP.`,
+          sql:`SELECT D3_OP, D3_COD, B1_DESC,
+  D3_QUANT AS QTD_CONSUMIDA,
+  B9_CM1 AS CUSTO_MEDIO,
+  (D3_QUANT * B9_CM1) AS CUSTO_TOTAL
+FROM SD3010 D3
+INNER JOIN SB9010 B9 ON B9_COD=D3_COD AND B9_FILIAL=D3_FILIAL AND B9.D_E_L_E_T_=' '
+INNER JOIN SB1010 B1 ON B1_COD=D3_COD AND B1_FILIAL=D3_FILIAL AND B1.D_E_L_E_T_=' '
+WHERE D3_FILIAL='01' AND D3_OP='000001' AND D3.D_E_L_E_T_=' '`
+        },
+      ];
+      const sc = scenarios[Math.floor(Math.random()*scenarios.length)];
+      return {
+        type:'🎯 Cenário Real', xp: XP_MAP[quizState.mode]+10,
+        text: sc.q,
+        context: sc.ctx,
+        options: shuffle([sc.a, ...sc.wrong]),
+        correct: sc.a,
+        feedback: sc.fb,
+        sql: sc.sql
+      };
+    }
+  }
+}
+
+function shuffle(arr) { return [...arr].sort(()=>Math.random()-0.5); }
+
+// ====================== QUIZ ENGINE ======================
+function startQuiz(mode) {
+  quizState.mode = mode;
+  quizState.current = 0;
+  quizState.xpEarned = 0;
+  quizState.correct = 0;
+  quizState.streak = 0;
+  quizState.maxStreak = 0;
+  const count = mode === 'quick' ? 10 : mode === 'marathon' ? 25 : 15;
+  quizState.questions = generateQuestions(mode, count);
+  showScreen('screen-quiz');
+  renderQuestion();
+}
+
+function renderQuestion() {
+  const q = quizState.questions[quizState.current];
+  const total = quizState.questions.length;
+  document.getElementById('q-counter').textContent = `${quizState.current+1}/${total}`;
+  document.getElementById('quiz-progress').style.width = `${(quizState.current/total)*100}%`;
+  document.getElementById('q-type-badge').textContent = q.type;
+  document.getElementById('q-text').innerHTML = q.text;
+  const ctx = document.getElementById('q-context');
+  if(q.context) { ctx.textContent = q.context; ctx.style.display='block'; }
+  else ctx.style.display='none';
+
+  const grid = document.getElementById('options-grid');
+  grid.innerHTML = '';
+  const keys = ['A','B','C','D'];
+  q.options.forEach((opt, i) => {
+    const btn = document.createElement('button');
+    btn.className = 'option-btn';
+    btn.innerHTML = `<span class="opt-key">${keys[i]}</span>${opt}`;
+    btn.onclick = () => answer(opt, btn);
+    grid.appendChild(btn);
+  });
+
+  document.getElementById('feedback-panel').className = 'feedback-panel';
+  document.getElementById('next-btn').style.display = 'none';
+  startTimer(q.type === 'sql' ? 30 : 20);
+}
+
+let timerInterval;
+function startTimer(sec) {
+  clearInterval(timerInterval);
+  quizState.timeLeft = sec;
+  const el = document.getElementById('timer');
+  el.className = 'timer-display';
+  el.textContent = sec + 's';
+  timerInterval = setInterval(() => {
+    quizState.timeLeft--;
+    el.textContent = quizState.timeLeft + 's';
+    if(quizState.timeLeft <= 5) el.className = 'timer-display danger';
+    if(quizState.timeLeft <= 0) {
+      clearInterval(timerInterval);
+      timeUp();
+    }
+  }, 1000);
+}
+
+function timeUp() {
+  const q = quizState.questions[quizState.current];
+  document.querySelectorAll('.option-btn').forEach(btn => {
+    btn.disabled = true;
+    if(btn.textContent.includes(q.correct)) btn.classList.add('reveal');
+  });
+  quizState.streak = 0;
+  showFeedback(false, q, 0);
+}
+
+function answer(opt, btn) {
+  clearInterval(timerInterval);
+  const q = quizState.questions[quizState.current];
+  const isCorrect = opt === q.correct;
+  document.querySelectorAll('.option-btn').forEach(b => {
+    b.disabled = true;
+    if(b.textContent.includes(q.correct)) b.classList.add('correct');
+  });
+  if(!isCorrect) btn.classList.add('wrong');
+  else btn.classList.remove('correct'), btn.classList.add('correct');
+
+  let xp = 0;
+  if(isCorrect) {
+    quizState.streak++;
+    quizState.correct++;
+    state.totalCorrect++;
+    if(quizState.streak > quizState.maxStreak) quizState.maxStreak = quizState.streak;
+    xp = q.xp + (quizState.streak > 2 ? Math.floor(q.xp*0.5) : 0);
+    quizState.xpEarned += xp;
+    addXP(xp);
+    showNotif(`+${xp} XP ${quizState.streak > 2 ? '🔥 Sequência x'+quizState.streak+'!' : '✓'}`, false);
+  } else {
+    quizState.streak = 0;
+    showNotif('Errou! Veja a explicação ↓', true);
+  }
+  state.totalAnswered++;
+  showFeedback(isCorrect, q, xp);
+  updateStatsBar();
+}
+
+function showFeedback(correct, q, xp) {
+  const panel = document.getElementById('feedback-panel');
+  panel.className = 'feedback-panel show' + (correct ? '' : ' wrong');
+  document.getElementById('feedback-title').innerHTML = correct
+    ? `✅ Correto! <span class="xp-earned">+${xp} XP</span>`
+    : `❌ Resposta: <strong>${q.correct}</strong>`;
+  document.getElementById('feedback-body').textContent = q.feedback;
+  const sqlEl = document.getElementById('feedback-sql');
+  if(q.sql) { sqlEl.textContent = q.sql; sqlEl.style.display='block'; }
+  else sqlEl.style.display='none';
+  document.getElementById('next-btn').style.display = 'block';
+}
+
+function nextQuestion() {
+  quizState.current++;
+  if(quizState.current >= quizState.questions.length) endQuiz();
+  else renderQuestion();
+}
+
+function endQuiz() {
+  clearInterval(timerInterval);
+  const pct = Math.round((quizState.correct/quizState.questions.length)*100);
+  const emojis = ['😅','🙂','😊','😎','🔥','🏆'];
+  const ei = Math.min(Math.floor(pct/20), 5);
+  document.getElementById('result-emoji').textContent = emojis[ei];
+  document.getElementById('result-title').textContent = pct>=80 ? 'Excelente performance!' : pct>=60 ? 'Bom resultado!' : 'Continue praticando!';
+  document.getElementById('result-sub').textContent = `${pct}% de aproveitamento · Modo: ${quizState.mode}`;
+  document.getElementById('r-correct').textContent = `${quizState.correct}/${quizState.questions.length}`;
+  document.getElementById('r-xp').textContent = quizState.xpEarned;
+  document.getElementById('r-streak').textContent = quizState.maxStreak;
+  showScreen('screen-result');
+}
+
+function restartQuiz() { startQuiz(quizState.mode); }
+
+// ====================== XP & LEVELS ======================
+function addXP(amount) {
+  const prevLevel = getLevelIndex(state.xp);
+  state.xp += amount;
+  const newLevel = getLevelIndex(state.xp);
+  updateXPBar();
+  if(newLevel > prevLevel) {
+    const lvl = LEVELS[newLevel];
+    document.getElementById('levelup-title').textContent = 'NÍVEL UP! ' + lvl.name;
+    document.getElementById('levelup-sub').textContent = `Você alcançou: ${lvl.label}`;
+    document.getElementById('levelup-overlay').classList.add('show');
+    setTimeout(()=>document.getElementById('levelup-overlay').classList.remove('show'), 3000);
+  }
+}
+
+function getLevelIndex(xp) {
+  for(let i = LEVELS.length-1; i >= 0; i--)
+    if(xp >= LEVELS[i].min) return i;
+  return 0;
+}
+
+function updateXPBar() {
+  const idx = getLevelIndex(state.xp);
+  const lvl = LEVELS[idx];
+  const next = LEVELS[Math.min(idx+1, LEVELS.length-1)];
+  const pct = idx >= LEVELS.length-1 ? 100 : ((state.xp - lvl.min)/(next.min - lvl.min))*100;
+  document.getElementById('xp-bar').style.width = Math.min(pct,100)+'%';
+  document.getElementById('xp-progress-label').textContent = `${state.xp} / ${next.min} XP`;
+  document.getElementById('level-name').textContent = lvl.name;
+  document.getElementById('xp-display').textContent = state.xp;
+  document.getElementById('level-display').textContent = idx+1;
+}
+
+function updateStatsBar() {
+  document.getElementById('streak-display').textContent = quizState.streak || state.streak;
+  document.getElementById('correct-display').textContent = `${state.totalCorrect}/${state.totalAnswered}`;
+}
+
+// ====================== CATALOG ======================
+function initCatalog() {
+  const modules = [...new Set(TABLES.map(t=>t.module))];
+  const tabsEl = document.getElementById('module-tabs');
+  tabsEl.innerHTML = '';
+  ['Todos', ...modules].forEach((m,i) => {
+    const btn = document.createElement('button');
+    btn.className = 'mod-tab' + (i===0?' active':'');
+    btn.textContent = m;
+    btn.onclick = () => {
+      document.querySelectorAll('.mod-tab').forEach(b=>b.classList.remove('active'));
+      btn.classList.add('active');
+      renderCatalog(m === 'Todos' ? null : m);
+    };
+    tabsEl.appendChild(btn);
+  });
+  renderCatalog(null);
+}
+
+function renderCatalog(module) {
+  const grid = document.getElementById('catalog-grid');
+  const filtered = module ? TABLES.filter(t=>t.module===module && t.name !== '_removido_') : TABLES.filter(t => t.name !== '_removido_' && t.module !== '_');
+  grid.innerHTML = '';
+  filtered.forEach(t => {
+    const card = document.createElement('div');
+    card.className = 'table-card';
+    card.innerHTML = `<div class="tc-code">${t.code}</div><div class="tc-name">${t.name}</div><div class="tc-module">${t.module}</div>`;
+    card.onclick = () => openModal(t);
+    grid.appendChild(card);
+  });
+}
+
+// ====================== MODAL ======================
+function openModal(table) {
+  document.getElementById('m-code').textContent = table.code;
+  document.getElementById('m-name').textContent = table.name;
+  document.getElementById('m-module').textContent = table.module;
+  document.getElementById('m-desc').textContent = table.desc;
+  document.getElementById('m-fields').textContent = table.fields;
+  document.getElementById('m-sql').textContent = table.sql;
+  const relsEl = document.getElementById('m-rels');
+  relsEl.innerHTML = (table.rels||[]).map(r=>`<span class="rel-chip" onclick="openModalByCode('${r}')">${r}</span>`).join('') || '<span style="color:var(--muted);font-size:0.82rem">Nenhum relacionamento mapeado</span>';
+  document.getElementById('modal-overlay').classList.add('open');
+}
+
+function openModalByCode(code) {
+  const t = TABLES.find(x=>x.code===code);
+  if(t) openModal(t);
+}
+
+function closeModal(e) { if(e.target.id==='modal-overlay') closeModalBtn(); }
+function closeModalBtn() { document.getElementById('modal-overlay').classList.remove('open'); }
+
+// ====================== SCREENS ======================
+function showScreen(id) {
+  document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+  if(id === 'screen-catalog') initCatalog();
+}
+
+// ====================== NOTIFICATION ======================
+function showNotif(msg, wrong=false) {
+  const el = document.getElementById('notif');
+  el.textContent = msg;
+  el.className = 'notif show' + (wrong ? ' wrong-notif' : '');
+  setTimeout(()=>el.className='notif', 2500);
+}
+
+// ====================== TEMA ======================
+const THEME_KEY = 'pq-theme';
+const THEME_COLORS = { noite: '#0A0E1A', preto: '#000000', branco: '#F4F6FB' };
+
+function applyTheme(theme) {
+  document.documentElement.setAttribute('data-theme', theme);
+  try { localStorage.setItem(THEME_KEY, theme); } catch (e) {}
+  document.querySelectorAll('.theme-btn').forEach(b => {
+    b.classList.toggle('active', b.dataset.themeBtn === theme);
+  });
+  const metaTheme = document.getElementById('meta-theme-color');
+  if (metaTheme) metaTheme.setAttribute('content', THEME_COLORS[theme] || '#0A0E1A');
+}
+
+function initThemeSwitcher() {
+  const saved = (function () { try { return localStorage.getItem(THEME_KEY); } catch (e) { return null; } })() || 'noite';
+  applyTheme(saved);
+  document.querySelectorAll('.theme-btn').forEach(btn => {
+    btn.addEventListener('click', () => applyTheme(btn.dataset.themeBtn));
+  });
+}
+initThemeSwitcher();
+
+// ====================== PWA: INSTALL PROMPT ======================
+let deferredInstallPrompt = null;
+const installBtn = document.getElementById('install-btn');
+
+window.addEventListener('beforeinstallprompt', (e) => {
+  e.preventDefault();
+  deferredInstallPrompt = e;
+  if (installBtn) installBtn.classList.add('show');
+});
+
+if (installBtn) {
+  installBtn.addEventListener('click', async () => {
+    if (!deferredInstallPrompt) return;
+    deferredInstallPrompt.prompt();
+    await deferredInstallPrompt.userChoice;
+    deferredInstallPrompt = null;
+    installBtn.classList.remove('show');
+  });
+}
+
+window.addEventListener('appinstalled', () => {
+  if (installBtn) installBtn.classList.remove('show');
+  deferredInstallPrompt = null;
+});
+
+// ====================== PWA: SERVICE WORKER ======================
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('sw.js').catch(() => {});
+  });
+}
+
+// ====================== INIT ======================
+updateXPBar();
+updateStatsBar();
+</script>
+</body>
+</html>
