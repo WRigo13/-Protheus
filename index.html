@@ -1604,6 +1604,10 @@ function startQuiz(mode) {
   quizState.correct = 0;
   quizState.streak = 0;
   quizState.maxStreak = 0;
+  // Reset deduplicated pools
+  _flowPool = [];
+  _archPool = [];
+  _consultPool = [];
   const counts = { quick:10, marathon:25, sql:15, arch:15, consulting:10, flow:12 };
   const count = counts[mode] || 10;
   quizState.questions = generateQuestions(mode, count);
@@ -1914,6 +1918,8 @@ const PROCESSES = [
       { q:'A NF de entrada foi lançada em SF1. Qual tabela recebe os ITENS desta nota?', a:'SD1', wrong:['SC7','SB2','SE2'], fb:'SD1 armazena os itens de cada NF de entrada: produto, qtd, valor unitário e TES.' },
       { q:'Qual tabela NO FINAL do fluxo P2P registra o PAGAMENTO ao fornecedor?', a:'SE5', wrong:['SE2','SEA','SA6'], fb:'SE5 é a tabela de movimentos bancários onde a baixa do título a pagar (SE2) é registrada.' },
       { q:'Uma SC1 foi criada. Qual é o PRÓXIMO PASSO no fluxo P2P?', a:'SC7', wrong:['SF1','SD1','SE2'], fb:'Depois da Solicitação (SC1), o departamento de Compras cria o Pedido de Compra (SC7) junto ao fornecedor.' },
+      { q:'No P2P, qual tabela gera a OBRIGAÇÃO DE PAGAMENTO ao fornecedor após a entrada da NF?', a:'SE2', wrong:['SE1','SE5','SEA'], fb:'SE2 (Contas a Pagar) é gerado automaticamente pelo lançamento da NF de entrada (SF1/SD1). E2_VENCREA = data de pagamento.' },
+      { q:'No P2P, o comprador quer saber se o FORNECEDOR já entregou tudo do pedido. Qual campo de SC7 indica o status de atendimento?', a:'SC7 — campo C7_QUJE (qtd já entregue) vs C7_QUANT (qtd pedida)', wrong:['SE2 — saldo do título','SF1 — data emissão NF','SB2 — saldo em estoque'], fb:'C7_QUJE acumula a quantidade já recebida via NF de entrada. C7_QUANT é o total pedido. A diferença indica pendência de entrega.' },
     ]
   },
   {
@@ -1933,6 +1939,8 @@ const PROCESSES = [
       { q:'Após emitir a NF de saída (SF2), qual tabela é gerada no financeiro?', a:'SE1', wrong:['SE2','SE5','SDA'], fb:'A NF de saída gera automaticamente um Título a Receber (SE1) com vencimento e valor.' },
       { q:'O cliente tem limite de crédito bloqueado. Qual tabela controla a LIBERAÇÃO do pedido?', a:'SC9', wrong:['SC5','SC6','SE1'], fb:'SC9 armazena os pedidos pendentes de liberação de crédito. Só após liberação o faturamento emite a NF.' },
       { q:'Qual tabela do O2C contém a CHAVE DE ACESSO da NF-e (campo F2_CHVNFE)?', a:'SF2', wrong:['SD2','SFJ','SC5'], fb:'SF2 é o cabeçalho da NF de saída. Contém F2_CHVNFE (44 dígitos) e o status de autorização SEFAZ.' },
+      { q:'No O2C, o cliente pagou e o título precisa ser baixado. Qual tabela é ATUALIZADA e qual REGISTRA o movimento?', a:'SE1 é baixada (E1_BAIXA preenchido) e SE5 registra o movimento bancário', wrong:['SF2 é cancelada e SE1 é excluída','SE1 e SE2 são atualizadas simultaneamente','Apenas SE5 é criada — SE1 não muda'], fb:'A baixa quita o SE1 (E1_SALDO=0, E1_BAIXA=data) e gera um registro em SE5 com o valor recebido e o banco.' },
+      { q:'No fluxo O2C, qual é a DIFERENÇA entre SC5 (pedido de venda) e SF2 (NF de saída)?', a:'SC5 é o compromisso comercial (pedido). SF2 é o documento fiscal emitido no faturamento. Um pedido pode gerar várias NFs', wrong:['São a mesma coisa com nomes diferentes','SC5 é NF de entrada e SF2 é NF de saída','SC5 fica em aberto até SF2 ser cancelada'], fb:'O pedido (SC5) é a intenção de venda. A NF (SF2) é o fato fiscal. Um pedido pode ser faturado em múltiplas NFs parciais.' },
     ]
   },
   {
@@ -1951,6 +1959,8 @@ const PROCESSES = [
       { q:'Para saber o CUSTO MÉDIO PONDERADO de um produto hoje, qual campo e tabela usar?', a:'SB9', wrong:['SB2','SB1','SD3'], fb:'SB9.B9_CM1 é o custo médio em moeda corrente. Atualizado automaticamente a cada entrada de NF.' },
       { q:'O almoxarife fez uma TRANSFERÊNCIA entre armazéns internamente. Qual tabela registra isso?', a:'SD3', wrong:['SBT','SB2','SF1'], fb:'SD3 registra movimentos internos (TM 99 = transferência, TM 98 = ajuste). SB2 é atualizado consequentemente.' },
       { q:'Na contagem do inventário físico, a diferença entre sistema e físico fica em qual tabela?', a:'SB3', wrong:['SB2','SD3','SBK'], fb:'SB3 armazena B3_QUANT (sistema) e B3_QINV (contagem física). A diferença gera SD3 de ajuste.' },
+      { q:'No fluxo de estoque, qual tabela controla onde FISICAMENTE cada produto está no armazém (endereço/WMS)?', a:'SBK', wrong:['SB2','SB4','SD3'], fb:'SBK faz o endereçamento: liga produto (BK_CODPRO) ao local físico (BK_LOCAL) com quantidade (BK_QTDATU). Base do WMS Protheus.' },
+      { q:'Um produto saiu do estoque via NF de saída. Quais tabelas são impactadas no módulo de estoque?', a:'SB2 (saldo diminui) + SB9 (custo médio recalcula) + SD3 (movimento registrado)', wrong:['Apenas SB2 é atualizada','SF2 e SB1 são as únicas impactadas','SB2 e SD3 mas SB9 não muda em saídas'], fb:'Toda saída afeta SB2 (quantidade), gera SD3 (movimento) e pode recalcular SB9 (custo médio ponderado atualizado).' },
     ]
   },
   {
@@ -1970,6 +1980,8 @@ const PROCESSES = [
       { q:'A OP foi emitida. Qual tabela armazena o CABEÇALHO da Ordem de Produção?', a:'SFC', wrong:['SFD','SG1','SPC'], fb:'SFC tem C2_NUM (número da OP), C2_PRODUTO, C2_QUANT (quantidade a produzir) e C2_DATPRF (prazo).' },
       { q:'O operador informou quantas horas trabalhou na OP. Qual tabela recebe esse APONTAMENTO?', a:'SPC', wrong:['SFC','SFD','SD3'], fb:'SPC registra apontamentos: PC_ORDEM, PC_OPERAC (operação), PC_HORAS, PC_QUANT (qtd produzida).' },
       { q:'O MRP calculou a necessidade de compra de um componente. Qual tabela armazena essa PREVISÃO?', a:'SFC3', wrong:['SC1','SG1','SFC'], fb:'SFC3 (tabela SMR010) armazena as previsões do MRP. A partir delas, o Protheus sugere criação de SC1 (Solicitações de Compra).' },
+      { q:'No PCP, ao ENCERRAR a OP, quais tabelas são impactadas automaticamente?', a:'SD3 (baixa componentes) + SB2 (entra produto acabado) + SB9 (atualiza custo)', wrong:['Apenas SFC tem seu status alterado','SG1 e SPC são excluídos','SFC e SFD são arquivados'], fb:'Encerrar OP gera SD3 de baixa dos componentes e SD3 de entrada do PA. SB2 e SB9 são atualizados consequentemente.' },
+      { q:'Qual tabela define o ROTEIRO DE OPERAÇÕES (sequência de etapas produtivas) para um produto no PCP?', a:'SG2', wrong:['SG1','SFC','SPC'], fb:'SG2 define as operações: G2_COD (produto), G2_OPERAC (operação), G2_DESCRI, G2_TEMRUN (tempo unitário de execução).' },
     ]
   },
   {
@@ -1987,6 +1999,8 @@ const PROCESSES = [
       { q:'Para saber o SALDO DISPONÍVEL em cada conta bancária, qual tabela consultar?', a:'SA6', wrong:['SE5','SEA','SMK'], fb:'SA6 tem o cadastro de contas (A6_SALDO). SE5 tem os movimentos de cada conta.' },
       { q:'Qual tabela agrupa vários títulos a receber para envio ao banco (remessa de cobrança)?', a:'SEA', wrong:['SE5','SE1','SA6'], fb:'SEA é o Borderô. Agrupa títulos SE1 por banco para envio em lote (CNAB240/400).' },
       { q:'O financeiro quer saber quais TÍTULOS VENCEM nos próximos 7 dias. Qual tabela e campo usar?', a:'SE1', wrong:['SE2','SE5','SDA'], fb:'SE1.E1_VENCREA é a data real de vencimento. Filtrando E1_BAIXA = " " e E1_SALDO > 0 você tem os abertos futuros.' },
+      { q:'No ciclo financeiro, qual é a diferença entre SE1 e SE5?', a:'SE1 = título a receber (obrigação do cliente). SE5 = movimento bancário (dinheiro que entrou de fato)', wrong:['SE1 é saída e SE5 é entrada','São a mesma tabela com alias diferentes','SE1 é para clientes PF e SE5 para PJ'], fb:'SE1 é o título (o que o cliente deve). SE5 é a realização (movimento real no banco quando o cliente paga).' },
+      { q:'Um fornecedor tem 3 parcelas a pagar. Quantos registros existem em SE2?', a:'3 registros — um por parcela, cada um com E2_PARCELA e E2_VENCREA próprios', wrong:['1 registro com campo E2_NPARCELA=3','Depende da condição de pagamento em SE4','1 registro com 3 itens de detalhe'], fb:'SE2 tem um registro por parcela. E2_NUM = número do título, E2_PARCELA = letra (A, B, C). Cada parcela tem seu próprio vencimento e saldo.' },
     ]
   },
 ];
@@ -2189,13 +2203,231 @@ WHERE D3_FILIAL='01'
   AND D_E_L_E_T_=' '
 -- Se não retornar nada: baixa não foi gerada`
   },
+  // 10 NOVOS CENÁRIOS DE CONSULTORIA
+  {
+    id:'s9', module:'Dicionário',
+    situation:'O cliente adicionou um campo customizado "B1_ZNOTA" (texto, 60 chars) ao cadastro de produtos via Configurador. O campo aparece na tela mas ao salvar o produto, o valor some e sempre fica em branco.',
+    question:'Qual é a causa mais provável?',
+    options:[
+      'X3_CONTEXT do campo está como "Virtual" — campo não é persistido no banco. Deve ser alterado para "Real"',
+      'O AppServer precisa ser reiniciado para reconhecer novos campos',
+      'Campos customizados com prefixo Z não são suportados no Protheus P12',
+      'A validação X3_VALID está rejeitando o valor silenciosamente'
+    ],
+    correct:'X3_CONTEXT do campo está como "Virtual" — campo não é persistido no banco. Deve ser alterado para "Real"',
+    explanation:'X3_CONTEXT="Virtual" = campo calculado em memória, não tem coluna no banco. Ao salvar, o Protheus não persiste campos virtuais. Solução: Configurador > Dicionário > Campos > SB1 > B1_ZNOTA > alterar Contexto para "Real". Depois rodar UPDDISTR ou reiniciar para criar a coluna no banco.',
+    table:'SX3', sql:`-- Verificar context do campo
+SELECT X3_CAMPO, X3_TIPO, X3_TAMANHO, X3_CONTEXT, X3_TITULO
+FROM SX3010
+WHERE X3_ARQUIVO='SB1' AND X3_CAMPO='B1_ZNOTA'
+  AND D_E_L_E_T_=' '
+-- Se X3_CONTEXT = 'V' = Virtual = não persiste`
+  },
+  {
+    id:'s10', module:'Performance',
+    situation:'Um relatório de faturamento que antes rodava em 30 segundos agora demora 8 minutos. A query cruza SD2 com SF2, SB1 e SA1. O banco tem 5 anos de dados. Nada foi alterado no código.',
+    question:'Qual é a investigação correta?',
+    options:[
+      'Verificar fragmentação de índices nas tabelas envolvidas (SIX) + volume de dados + plano de execução SQL com EXPLAIN/SET STATISTICS',
+      'Reescrever toda a query do zero em TLPP',
+      'Aumentar a memória RAM do servidor de banco de dados imediatamente',
+      'Excluir dados históricos de SD2 anteriores a 2 anos para reduzir volume'
+    ],
+    correct:'Verificar fragmentação de índices nas tabelas envolvidas (SIX) + volume de dados + plano de execução SQL com EXPLAIN/SET STATISTICS',
+    explanation:'Lentidão progressiva quase sempre é fragmentação de índice (comum após crescimento de volume) ou estatísticas desatualizadas no SQL Server. Passos: (1) DBCC SHOWCONTIG para verificar fragmentação; (2) ALTER INDEX REBUILD nas tabelas do relatório; (3) UPDATE STATISTICS; (4) Revisar plano de execução para table scans inesperados.',
+    table:'SIX', sql:`-- Verificar índices de SD2 no dicionário
+SELECT INDICE, ORDEM, CHAVE, DESCRI
+FROM SIX010
+WHERE INDICE = 'SD2'
+  AND D_E_L_E_T_=' '
+ORDER BY ORDEM
+-- No SQL Server: DBCC SHOWCONTIG('SD2010')`
+  },
+  {
+    id:'s11', module:'Fiscal',
+    situation:'O SPED Fiscal foi gerado mas o arquivo foi rejeitado pela SEFAZ com erro "Registro C170 com valor divergente do C100". O total dos itens (SD2) não fecha com o cabeçalho da NF (SF2).',
+    question:'Como investigar a divergência?',
+    options:[
+      'Consultar SF2.F2_VALBRUT vs SUM(SD2.D2_TOTAL) groupando por documento — identificar quais NFs têm itens que não fecham com o cabeçalho',
+      'Rejeitar o arquivo e pedir para o contador gerar manualmente',
+      'Cancelar todas as NFs do período e reemitir',
+      'O erro é da SEFAZ — aguardar correção no portal'
+    ],
+    correct:'Consultar SF2.F2_VALBRUT vs SUM(SD2.D2_TOTAL) groupando por documento — identificar quais NFs têm itens que não fecham com o cabeçalho',
+    explanation:'C100 = cabeçalho (SF2). C170 = itens (SD2). Se soma dos itens ≠ total do cabeçalho, o SPED rejeita. Causas comuns: NF com desconto no cabeçalho não distribuído nos itens, ou item excluído logicamente mas cabeçalho não recalculado. Identificar as NFs problemáticas e reprocessar via rotina de recálculo.',
+    table:'SF2', sql:`-- Identificar NFs com divergência cabeçalho vs itens
+SELECT F2_DOC, F2_SERIE, F2_VALBRUT AS TOTAL_CAB,
+  SUM(D2_TOTAL) AS TOTAL_ITENS,
+  F2_VALBRUT - SUM(D2_TOTAL) AS DIFERENCA
+FROM SF2010 F2
+INNER JOIN SD2010 D2 ON D2_DOC=F2_DOC AND D2_SERIE=F2_SERIE
+  AND D2_FILIAL=F2_FILIAL AND D2.D_E_L_E_T_=' '
+WHERE F2_FILIAL='01' AND F2_EMISSAO >= '20240101' AND F2.D_E_L_E_T_=' '
+GROUP BY F2_DOC, F2_SERIE, F2_VALBRUT
+HAVING ABS(F2_VALBRUT - SUM(D2_TOTAL)) > 0.01`
+  },
+  {
+    id:'s12', module:'Estoque',
+    situation:'O sistema está permitindo que o estoque de um produto fique negativo (B2_QATU < 0). O cliente diz que isso não deveria acontecer e está causando erros no custo médio.',
+    question:'Como corrigir isso?',
+    options:[
+      'Verificar o parâmetro MV_ESTLQL (estoque líquido) e MV_NEGNOT — se permitido, alterar para bloquear saídas sem estoque suficiente',
+      'Apagar os registros negativos diretamente em SB2',
+      'O estoque negativo é comportamento padrão e não tem como bloquear',
+      'Reinstalar o módulo de estoque do Protheus'
+    ],
+    correct:'Verificar o parâmetro MV_ESTLQL (estoque líquido) e MV_NEGNOT — se permitido, alterar para bloquear saídas sem estoque suficiente',
+    explanation:'MV_NEGNOT="S" permite NF de saída mesmo sem saldo suficiente. MV_ESTLQL controla se usa estoque líquido (descontando reservas) ou bruto. Para bloquear negativo: MV_NEGNOT="N". Além disso, verifique se há movimentos SD3 de ajuste ou transferência sem controle que estejam causando o negativo.',
+    table:'SB2', sql:`-- Identificar produtos com saldo negativo
+SELECT B2_COD, B1_DESC, B2_LOCAL, B2_QATU
+FROM SB2010 B2
+INNER JOIN SB1010 B1 ON B1_COD=B2_COD AND B1_FILIAL=B2_FILIAL AND B1.D_E_L_E_T_=' '
+WHERE B2_FILIAL='01' AND B2_QATU < 0 AND B2.D_E_L_E_T_=' '
+ORDER BY B2_QATU ASC`
+  },
+  {
+    id:'s13', module:'Compras',
+    situation:'A empresa implementou aprovação de pedidos de compra (workflow). Um pedido de R$ 50.000 está bloqueado há 3 dias e o aprovador diz que "não recebeu a notificação no sistema". O pedido está parado em SC7.',
+    question:'O que investigar?',
+    options:[
+      'Verificar se o usuário aprovador está no grupo de alçadas correto + se as alçadas de aprovação estão configuradas para o valor do pedido em SIGACOM > Alçadas',
+      'Cancelar o pedido e recriar com valor menor para evitar a aprovação',
+      'Fazer UPDATE direto em SC7 para marcar o pedido como aprovado',
+      'O problema é de email — configurar SMTP no Protheus'
+    ],
+    correct:'Verificar se o usuário aprovador está no grupo de alçadas correto + se as alçadas de aprovação estão configuradas para o valor do pedido em SIGACOM > Alçadas',
+    explanation:'O workflow de aprovação de SC7 no Protheus usa Alçadas de Aprovação configuradas por faixa de valor e grupo de usuários. Se o aprovador não recebeu a notificação: (1) verificar se ele está no grupo de alçada para pedidos >R$50k; (2) checar se as alçadas estão configuradas para a filial correta; (3) verificar se o pedido passou pela rotina de aprovação corretamente.',
+    table:'SC7', sql:`-- Verificar status de aprovação do pedido
+SELECT C7_NUM, C7_PRODUTO, C7_VALOR, C7_APROVA, C7_USRAPR
+FROM SC7010
+WHERE C7_FILIAL='01' AND C7_NUM='000001' AND D_E_L_E_T_=' '
+-- C7_APROVA=' ' = aguardando aprovação
+-- C7_APROVA='S' = aprovado`
+  },
+  {
+    id:'s14', module:'Financeiro',
+    situation:'O relatório de DRE (Demonstrativo de Resultado) está com valores incorretos. Algumas receitas de venda não estão aparecendo no resultado do mês, mesmo com as NFs emitidas em SF2.',
+    question:'Qual é a causa mais provável?',
+    options:[
+      'O TES das NFs tem F4_CONTA (conta contábil) em branco ou incorreto — as NFs não geraram lançamentos em CT1',
+      'O plano de contas CTT está desatualizado — recadastrar as contas',
+      'As NFs foram emitidas mas não enviadas à SEFAZ ainda',
+      'O módulo financeiro não está integrado ao contábil — é esperado'
+    ],
+    correct:'O TES das NFs tem F4_CONTA (conta contábil) em branco ou incorreto — as NFs não geraram lançamentos em CT1',
+    explanation:'A NF gera lançamentos contábeis (CT1) automaticamente se o TES (SF4) tiver F4_CONTA configurado. Se F4_CONTA estiver em branco, a contabilização não acontece e a receita não aparece no DRE. Verificar também o parâmetro MV_CTLANL (nível de análise contábil) e se a integração SIGAFIS>SIGACTB está ativa.',
+    table:'CT1', sql:`-- Verificar se NFs geraram lançamentos contábeis
+SELECT F2_DOC, F2_SERIE, F2_EMISSAO,
+  CT1_CONTA, CT1_DEBITO, CT1_CREDITO
+FROM SF2010 F2
+LEFT JOIN CT1010 CT ON CT1_DOC=F2_DOC AND CT1_FILIAL=F2_FILIAL AND CT1.D_E_L_E_T_=' '
+WHERE F2_FILIAL='01' AND F2_EMISSAO >= '20240101' AND F2.D_E_L_E_T_=' '
+-- NFs sem CT1 = contabilização não gerada`
+  },
+  {
+    id:'s15', module:'Sistema',
+    situation:'Após uma atualização de RPO aplicada pelo TI, vários usuários relatam que o sistema travou na tela de cálculo de pedidos. O erro aparece como "Fonte não encontrado: MATA410".',
+    question:'Qual é a causa e como resolver?',
+    options:[
+      'A customização local do MATA410 não foi recompilada contra o novo RPO — recompilar o fonte customizado ou restaurar o RPO anterior',
+      'Reinstalar o Protheus em todas as máquinas',
+      'O SQL Server ficou offline durante a atualização do RPO',
+      'O erro é de licença — contatar TOTVS para renovação'
+    ],
+    correct:'A customização local do MATA410 não foi recompilada contra o novo RPO — recompilar o fonte customizado ou restaurar o RPO anterior',
+    explanation:'"Fonte não encontrado" após update de RPO quase sempre = customização incompatível. O RPO novo sobrescreveu ou removeu uma rotina que o customizado dependia. Solução: (1) restaurar o RPO anterior enquanto investiga; (2) recompilar o fonte customizado contra o novo RPO; (3) verificar se o PE ou User Function estava usando uma função que mudou de nome na nova versão.',
+    table:'SYS_USR', sql:`-- Verificar versão do RPO ativo (via log AppServer)
+-- No Protheus.ini: RootPath aponta para o diretório
+-- Verificar data/hora do arquivo .rpo
+-- Alternativa: no SmartClient, Help > Sobre > versão do RPO`
+  },
+  {
+    id:'s16', module:'Vendas',
+    situation:'Um vendedor fez um pedido de venda (SC5) com desconto de 15%. Ao faturar, a NF de saída (SF2) saiu sem desconto e com valor maior que o pedido. O financeiro gerou título SE1 com valor errado.',
+    question:'O que causou a divergência pedido vs NF?',
+    options:[
+      'O TES utilizado no faturamento não estava configurado para herdar os descontos do pedido (SC5 > SC6)',
+      'O cliente tem limite de crédito que zera descontos automaticamente',
+      'O vendedor não tem permissão para dar desconto no sistema',
+      'Descontos em SC5 nunca são replicados para SF2 — é comportamento esperado'
+    ],
+    correct:'O TES utilizado no faturamento não estava configurado para herdar os descontos do pedido (SC5 > SC6)',
+    explanation:'No Protheus, o desconto do pedido (C6_DESCONT) deve ser transportado para o item da NF (D2_DESC). Isso depende da configuração do TES e do parâmetro MV_TPDESC. Se o faturamento não capturou o desconto do pedido, a NF sai com valor bruto. Solução: cancelar a NF, revisar o TES e refaturar.',
+    table:'SC5', sql:`-- Comparar desconto do pedido vs NF
+SELECT C5_NUM AS PEDIDO, C6_DESCONT AS DESC_PEDIDO,
+  F2_DOC AS NF, D2_DESC AS DESC_NF,
+  (C6_PRCVEN * C6_QTDVEN) AS VALOR_PEDIDO,
+  D2_TOTAL AS VALOR_NF
+FROM SC5010 C5
+INNER JOIN SC6010 C6 ON C6_NUM=C5_NUM AND C6_FILIAL=C5_FILIAL AND C6.D_E_L_E_T_=' '
+INNER JOIN SD2010 D2 ON D2_PEDIDO=C5_NUM AND D2_FILIAL=C5_FILIAL AND D2.D_E_L_E_T_=' '
+INNER JOIN SF2010 F2 ON F2_DOC=D2_DOC AND F2_FILIAL=D2_FILIAL AND F2.D_E_L_E_T_=' '
+WHERE C5_FILIAL='01' AND C5_NUM='000001' AND C5.D_E_L_E_T_=' '`
+  },
+  {
+    id:'s17', module:'RH',
+    situation:'O processamento da folha de pagamento falhou com erro "Funcionário sem centro de custo" para 12 funcionários. O RH diz que todos têm centro de custo preenchido na tela de cadastro.',
+    question:'O que verificar?',
+    options:[
+      'Checar SRA.RA_CC — o campo de centro de custo do funcionário — e confirmar que o código existe em SCC/CTT e está ativo',
+      'Reprocessar a folha sem os 12 funcionários e incluí-los manualmente no Excel',
+      'O erro é no DBAccess — reiniciar o serviço antes de reprocessar',
+      'Centros de custo precisam ser recadastrados todo mês no Protheus'
+    ],
+    correct:'Checar SRA.RA_CC — o campo de centro de custo do funcionário — e confirmar que o código existe em SCC/CTT e está ativo',
+    explanation:'RA_CC deve referenciar um centro de custo existente e ativo em SCC (ou CTT, dependendo da versão). Se o CC foi excluído/inativado ou se RA_CC tem um código que não existe mais, a folha rejeita. Verificar também se o CC está cadastrado para a filial correta.',
+    table:'SRA', sql:`-- Verificar funcionários com CC problemático
+SELECT RA_MAT, RA_NOME, RA_CC,
+  CTT_CUSTO, CTT_DESC01
+FROM SRA010 RA
+LEFT JOIN CTT010 CTT ON CTT_CUSTO=RA_CC AND CTT_FILIAL=RA_FILIAL AND CTT.D_E_L_E_T_=' '
+WHERE RA_FILIAL='01'
+  AND RA_DEMISSA=' '  -- ativos
+  AND CTT_CUSTO IS NULL  -- CC não encontrado!
+  AND RA.D_E_L_E_T_=' '`
+  },
+  {
+    id:'s18', module:'Estoque',
+    situation:'O relatório de curva ABC de produtos está classificando errado — produtos com alto faturamento estão aparecendo como "C" (baixo giro) e vice-versa. O relatório usa SD2 dos últimos 12 meses.',
+    question:'Qual é a causa mais provável?',
+    options:[
+      'O campo D2_EMISSAO em SD2 está sendo filtrado incorretamente — possivelmente incluindo devoluções (TES de devolução) que cancelam o valor vendido',
+      'A curva ABC sempre tem esse comportamento no Protheus — usar Excel para corrigir',
+      'SD2 não contém o faturamento real — usar SF2 para a curva ABC',
+      'O problema é na parametrização do gráfico de Power BI, não nos dados'
+    ],
+    correct:'O campo D2_EMISSAO em SD2 está sendo filtrado incorretamente — possivelmente incluindo devoluções (TES de devolução) que cancelam o valor vendido',
+    explanation:'Devoluções de venda também geram registros em SD2 com D2_TOTAL negativo (ou com TES específico de devolução). Se a query não filtrar por tipo de operação (D2_TES), devoluções reduzem o faturamento líquido dos produtos mais vendidos, distorcendo a curva ABC. Filtrar apenas TES de venda, excluindo TES de devolução.',
+    table:'SD2', sql:`-- Curva ABC correta: excluir devoluções
+SELECT D2_COD, B1_DESC,
+  SUM(CASE WHEN F4_DEVOL='N' THEN D2_TOTAL ELSE -D2_TOTAL END) AS FAT_LIQUIDO,
+  RANK() OVER (ORDER BY SUM(D2_TOTAL) DESC) AS RANK_ABC
+FROM SD2010 D2
+INNER JOIN SB1010 B1 ON B1_COD=D2_COD AND B1_FILIAL=D2_FILIAL AND B1.D_E_L_E_T_=' '
+INNER JOIN SF4010 F4 ON F4_CODIGO=D2_TES AND F4.D_E_L_E_T_=' '
+WHERE D2_FILIAL='01'
+  AND D2_EMISSAO >= CONVERT(VARCHAR,DATEADD(MONTH,-12,GETDATE()),112)
+  AND D2.D_E_L_E_T_=' '
+GROUP BY D2_COD, B1_DESC
+ORDER BY FAT_LIQUIDO DESC`
+  },
 ];
 
 // ====================== FLOW QUIZ QUESTIONS ======================
+// Pool global de perguntas de fluxo — sem repetição durante um quiz
+let _flowPool = [];
 function buildFlowQuestion(pool) {
-  const proc = PROCESSES[Math.floor(Math.random()*PROCESSES.length)];
-  const qs = proc.questions;
-  const q = qs[Math.floor(Math.random()*qs.length)];
+  // Flatten all questions from all processes with process context
+  if(_flowPool.length === 0) {
+    PROCESSES.forEach(proc => {
+      proc.questions.forEach(q => {
+        _flowPool.push({ proc, q });
+      });
+    });
+    _flowPool = shuffle(_flowPool);
+  }
+  const item = _flowPool.shift(); // pega e remove do pool
+  const { proc, q } = item;
   return {
     type:'🔄 Fluxo de Processo', xp: 20,
     text: `[${proc.name}] ${q.q}`,
@@ -2235,10 +2467,24 @@ const ARCH_QUESTIONS = [
   // Multiempresa
   { q:'No Protheus, qual é a diferença entre EMPRESA e FILIAL?', a:'Empresa = grupo econômico (2 chars). Filial = unidade de negócio dentro da empresa (2 chars). Uma empresa pode ter N filiais', wrong:['São sinônimos — Protheus usa os dois termos para a mesma coisa','Empresa = matriz, Filial = departamento dentro da mesma unidade','Filial é apenas um agrupamento contábil, sem impacto operacional'], fb:'Ex: Empresa "01" = Grupo ABC. Filial "01" = São Paulo, "02" = Betim. Tabelas têm X2_MODO: C=compartilhada entre filiais, E=exclusiva por filial.' },
   { q:'Para que serve o campo X2_MODO na tabela SX2?', a:'Define se a tabela é Compartilhada (C) entre filiais ou Exclusiva (E) por filial', wrong:['Define o módulo ao qual a tabela pertence','Controla o modo de acesso (leitura/escrita)','Define se a tabela usa D_E_L_E_T_ ou não'], fb:'X2_MODO="C" (ex: SB1-Produtos) = cadastro único para todas as filiais. X2_MODO="E" (ex: SB2-Saldos) = registro separado por filial.' },
+  // 10 NOVAS PERGUNTAS DE ARQUITETURA
+  { q:'O que acontece ao compilar um fonte AdvPL customizado e aplicar no ambiente Protheus?', a:'O código compilado é inserido no RPO — substituindo ou adicionando a rotina, sem alterar o RPO padrão TOTVS', wrong:['O código é salvo diretamente no banco de dados em SX3','O SmartClient passa a executar o código localmente','O DBAccess cria uma nova procedure SQL equivalente'], fb:'Compilar AdvPL gera um objeto que é incluído no RPO. O RPO é o repositório único de código. Reverter = restaurar o RPO anterior.' },
+  { q:'Um cliente relata que o Protheus está muito lento ao pesquisar em SA1 (Clientes). Qual é o PRIMEIRO lugar a investigar?', a:'Índices da tabela SA1 em SIX — verificar se o índice pela chave de busca está correto e não está fragmentado', wrong:['Reinstalar o SmartClient','Aumentar o timeout no Protheus.ini','Excluir registros antigos de SA1 para diminuir o volume'], fb:'Performance de busca no Protheus depende dos índices definidos em SIX (dicionário de índices). Índice ausente ou fragmentado = lentidão. Reconstruir índice é o primeiro passo.' },
+  { q:'O que é o CONFIGURADOR (SIGACFG) no Protheus?', a:'Módulo administrativo onde se gerencia dicionário de dados (SX2/SX3), parâmetros (SX6), menus, grupos de usuários e permissões', wrong:['Software externo da TOTVS para instalação do sistema','Interface de configuração do SQL Server','Painel de monitoramento do AppServer'], fb:'O Configurador é a ferramenta número 1 do consultor funcional. Toda customização de tela, campo e parâmetro passa por aqui.' },
+  { q:'Em AdvPL, o que faz a função cGetDate() comparada a Date()?', a:'cGetDate() retorna a data no formato string "YYYYMMDD" (usado em filtros SQL). Date() retorna tipo Date do AdvPL', wrong:['São idênticas — apenas aliases diferentes','cGetDate() busca a data do servidor, Date() usa a data local','Date() é depreciada na versão TLPP'], fb:'Em queries Protheus, datas são campos Char(8) no formato YYYYMMDD. cGetDate() ou DtoS(Date()) converte para esse formato. Nunca use Date() diretamente em filtros SQL Protheus.' },
+  { q:'O que é o campo X3_CONTEXT em SX3 e quais valores pode ter?', a:'"Real" = campo físico no banco. "Virtual" = campo calculado, existe na tela mas não no banco', wrong:['"Real" = campo obrigatório. "Virtual" = campo opcional','Define se o campo aparece na interface web ou desktop','Indica se o campo é índice primário ou secundário'], fb:'X3_CONTEXT="Real" = tem coluna no banco, é persistido. X3_CONTEXT="Virtual" = existe só na memória da sessão (calculado em tempo real). Errar isso em query gera "coluna não encontrada".' },
+  { q:'O que é a tabela SF4 (TES — Tipos de Entrada e Saída) e por que é crítica?', a:'Configura o comportamento fiscal e contábil de cada operação: se atualiza estoque, gera duplicata, lança contabilidade, e qual CF/CFOP usar', wrong:['Tabela de fornecedores por estado fiscal','Histórico de auditoria de todas as NFs emitidas','Configuração de impressoras fiscais (ECF)'], fb:'O TES é o "DNA" de cada operação no Protheus. F4_ESTOQUE="S/N" (atualiza estoque?), F4_DUPLIC="S/N" (gera título?), F4_CF (CFOP). Uma TES errada compromete fiscal, estoque e financeiro.' },
+  { q:'Qual a diferença entre TLPP e AdvPL no ecossistema Protheus?', a:'TLPP é a linguagem moderna da TOTVS (tipagem, orientação a objetos avançada, REST nativo). AdvPL é a linguagem legada ainda muito usada', wrong:['São a mesma linguagem com nomes diferentes em versões distintas','TLPP roda no client e AdvPL no servidor','AdvPL é para módulos fiscais e TLPP para módulos de RH'], fb:'TLPP (TOTVS Language Plus Plus) é a evolução: tipagem estática, classes, interfaces, REST nativo. AdvPL é procedural e ainda dominante. Vagas novas já exigem TLPP.' },
+  { q:'O que é o protocolo APSDU no Protheus?', a:'Ferramenta de consulta e manutenção direta das tabelas do Protheus, sem passar pelo SmartClient — acesso via TCP ao AppServer', wrong:['Protocolo de comunicação entre AppServer e DBAccess','Ferramenta de auditoria de acessos do usuário','Interface web do Protheus para dispositivos móveis'], fb:'APSDU (Application Server Data Utility) permite consultar e editar dados diretamente via protocolo Protheus. Útil para diagnóstico, mas perigoso em produção — bypassa validações.' },
+  { q:'Por que tabelas como SB1 têm sufixo "010" (SB1010) no banco de dados?', a:'O sufixo indica a empresa + filial: "01" = empresa 01, "0" ou "10" = contexto. Tabelas compartilhadas usam "000" como sufix', wrong:['010 é o número de versão do schema da tabela','É um índice aleatório gerado na criação do banco','010 indica que a tabela tem 10 campos indexados'], fb:'No SQL Server, Protheus cria tabelas como SB1010 onde "01" = empresa e "0" = filial (para compartilhadas) ou filial específica. SB2010 filial 01, SB2020 filial 02 (quando exclusiva).' },
+  { q:'O que significa o campo X3_VALID em SX3 e como ele funciona?', a:'X3_VALID contém uma expressão AdvPL que é executada como validação ao salvar o campo. Se retornar .F., o sistema rejeita o valor', wrong:['É o valor padrão inicial do campo','Define se o campo é visível ou oculto na tela','É o label do campo exibido na interface'], fb:'Ex: X3_VALID="ExistChav(\"SB1\",M->B1_COD)" — valida se o produto existe em SB1. Customizar validação = alterar X3_VALID via Configurador. Expressão deve retornar .T. (aceitar) ou .F. (rejeitar).' },
+  { q:'O que é o "Ambiente" (ENV) no Protheus e como difere de Empresa/Filial?', a:'Ambiente é o conjunto de configurações do sistema (dicionário, parâmetros, RPO). Uma empresa pode ter múltiplos ambientes (produção, homologação, teste)', wrong:['Ambiente = sinônimo de Filial no Protheus','Ambiente é o servidor físico onde o AppServer roda','Ambiente e Empresa são a mesma coisa em versões acima do P12'], fb:'Um ambiente Protheus = um Protheus.ini + RPO específico. Empresa 01 pode ter ambiente "producao" e ambiente "homolog" com dados separados. Essencial para gestão de releases.' },
 ];
 
+let _archPool = [];
 function buildArchQuestion() {
-  const q = ARCH_QUESTIONS[Math.floor(Math.random()*ARCH_QUESTIONS.length)];
+  if(_archPool.length === 0) _archPool = shuffle([...ARCH_QUESTIONS]);
+  const q = _archPool.shift();
   return {
     type:'🏗️ Arquitetura', xp: 20,
     text: q.q, context: null,
@@ -2248,8 +2494,10 @@ function buildArchQuestion() {
   };
 }
 
+let _consultPool = [];
 function buildConsultQuestion() {
-  const s = CONSULT_SCENARIOS[Math.floor(Math.random()*CONSULT_SCENARIOS.length)];
+  if(_consultPool.length === 0) _consultPool = shuffle([...CONSULT_SCENARIOS]);
+  const s = _consultPool.shift();
   return {
     type:'🔧 Consultoria', xp: 25,
     text: `<strong>[${s.module}]</strong> ${s.question}`,
