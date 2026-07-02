@@ -729,6 +729,16 @@
   </div>
 </div>
 
+<!-- INSTALL HELP MODAL -->
+<div class="modal-overlay" id="install-help-overlay" onclick="if(event.target.id==='install-help-overlay') closeInstallHelp()">
+  <div class="modal" id="install-help-content" style="max-width:420px">
+    <button class="modal-close" onclick="closeInstallHelp()">✕</button>
+    <div style="font-size:2rem;margin-bottom:8px">📲</div>
+    <div class="modal-name" style="margin-bottom:16px">Como instalar o app</div>
+    <p id="install-help-body" style="font-size:0.9rem;line-height:1.6;color:var(--text)"></p>
+  </div>
+</div>
+
 <!-- NOTIFICATION -->
 <div class="notif" id="notif"></div>
 
@@ -1728,19 +1738,66 @@ initThemeSwitcher();
 let deferredInstallPrompt = null;
 const installBtn = document.getElementById('install-btn');
 
+function isStandalone() {
+  return window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone === true;
+}
+
+function detectPlatform() {
+  const ua = navigator.userAgent;
+  const isIOS = /iPad|iPhone|iPod/.test(ua) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+  const isSafari = /^((?!chrome|android|crios|fxios|edg).)*safari/i.test(ua);
+  const isFirefox = /firefox|fxios/i.test(ua);
+  const isEdge = /edg/i.test(ua);
+  const isAndroid = /android/i.test(ua);
+  if (isIOS) return 'ios';
+  if (isAndroid) return 'android';
+  if (isFirefox) return 'firefox';
+  if (isEdge) return 'edge';
+  return 'chrome-desktop';
+}
+
+const INSTALL_INSTRUCTIONS = {
+  'ios': 'No Safari: toque no ícone de Compartilhar (o quadrado com seta para cima) na barra inferior e depois em "Adicionar à Tela de Início".',
+  'android': 'Toque no menu (⋮) do navegador e escolha "Instalar app" ou "Adicionar à tela inicial". Se não aparecer, o Chrome pode oferecer o prompt automaticamente em alguns segundos.',
+  'firefox': 'O Firefox para desktop ainda não instala PWAs como app nativo. Use Chrome ou Edge para instalar, ou fixe esta aba/crie um atalho na área de trabalho pelo menu do navegador.',
+  'edge': 'Clique no ícone de instalação (⊕ ou um monitor com seta) na barra de endereço, à direita da URL, ou vá em menu (···) → Apps → "Instalar este site como um aplicativo".',
+  'chrome-desktop': 'Clique no ícone de instalação (⊕) na barra de endereço, à direita da URL. Se não aparecer, abra o menu (⋮) → "Instalar ProtheusQuiz…".'
+};
+
+function showInstallHelp() {
+  const platform = detectPlatform();
+  const overlay = document.getElementById('install-help-overlay');
+  const body = document.getElementById('install-help-body');
+  if (body) body.textContent = INSTALL_INSTRUCTIONS[platform] || INSTALL_INSTRUCTIONS['chrome-desktop'];
+  if (overlay) overlay.classList.add('open');
+}
+
+function closeInstallHelp() {
+  const overlay = document.getElementById('install-help-overlay');
+  if (overlay) overlay.classList.remove('open');
+}
+
 window.addEventListener('beforeinstallprompt', (e) => {
   e.preventDefault();
   deferredInstallPrompt = e;
   if (installBtn) installBtn.classList.add('show');
 });
 
-if (installBtn) {
+if (installBtn && !isStandalone()) {
+  // Mostra o botão sempre — o Chrome nem sempre dispara beforeinstallprompt
+  // na primeira visita (depende de heurísticas de engajamento), então não
+  // dependemos só dele: sem o evento nativo, oferecemos instruções manuais.
+  installBtn.classList.add('show');
+
   installBtn.addEventListener('click', async () => {
-    if (!deferredInstallPrompt) return;
-    deferredInstallPrompt.prompt();
-    await deferredInstallPrompt.userChoice;
-    deferredInstallPrompt = null;
-    installBtn.classList.remove('show');
+    if (deferredInstallPrompt) {
+      deferredInstallPrompt.prompt();
+      const choice = await deferredInstallPrompt.userChoice;
+      deferredInstallPrompt = null;
+      if (choice.outcome === 'accepted') installBtn.classList.remove('show');
+    } else {
+      showInstallHelp();
+    }
   });
 }
 
